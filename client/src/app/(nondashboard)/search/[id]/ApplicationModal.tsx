@@ -1,17 +1,17 @@
-import { CustomFormField } from "@/components/FormField";
-import { Button } from "@/components/ui/button";
+import { CustomFormField } from '@/components/FormField';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Form } from "@/components/ui/form";
-import { ApplicationFormData, applicationSchema } from "@/lib/schemas";
-import { useCreateApplicationMutation, useGetAuthUserQuery } from "@/state/api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import React from "react";
-import { useForm } from "react-hook-form";
+} from '@/components/ui/dialog';
+import { Form } from '@/components/ui/form';
+import { ApplicationFormData, applicationSchema } from '@/lib/schemas';
+import { useCreateApplicationMutation, useGetAuthUserQuery } from '@/state/api';
+import { zodResolver } from '@hookform/resolvers/zod';
+import React from 'react';
+import { useForm } from 'react-hook-form';
 
 const ApplicationModal = ({
   isOpen,
@@ -21,20 +21,21 @@ const ApplicationModal = ({
   const [createApplication] = useCreateApplicationMutation();
   const { data: authUser } = useGetAuthUserQuery();
 
+  // i want to add id upload to the application later
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phoneNumber: "",
-      message: "",
+      name: '',
+      email: '',
+      phoneNumber: '',
+      message: '',
     },
   });
 
   const onSubmit = async (data: ApplicationFormData) => {
-    if (!authUser || authUser.userRole !== "tenant") {
+    if (!authUser || authUser.userRole !== 'tenant') {
       console.error(
-        "You must be logged in as a tenant to submit an application"
+        'You must be logged in as a tenant to submit an application'
       );
       return;
     }
@@ -42,7 +43,7 @@ const ApplicationModal = ({
     await createApplication({
       ...data,
       applicationDate: new Date().toISOString(),
-      status: "Pending",
+      status: 'Pending',
       propertyId: propertyId,
       tenantCognitoId: authUser.cognitoInfo.userId,
     });

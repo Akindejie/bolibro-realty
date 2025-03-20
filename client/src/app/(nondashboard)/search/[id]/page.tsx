@@ -33,13 +33,13 @@ const SingleListing = () => {
         </div>
       </div>
 
-      {/* {authUser && (
+      {authUser && (
         <ApplicationModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           propertyId={propertyId}
         />
-      )} */}
+      )}
     </div>
   );
 };
