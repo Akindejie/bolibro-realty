@@ -35,7 +35,7 @@ export const getProperties = async (
     let whereConditions: Prisma.Sql[] = [];
 
     if (favoriteIds) {
-      const favoriteIdsArray = (favoriteIds as string).split(",").map(Number);
+      const favoriteIdsArray = (favoriteIds as string).split(',').map(Number);
       whereConditions.push(
         Prisma.sql`p.id IN (${Prisma.join(favoriteIdsArray)})`
       );
@@ -53,11 +53,11 @@ export const getProperties = async (
       );
     }
 
-    if (beds && beds !== "any") {
+    if (beds && beds !== 'any') {
       whereConditions.push(Prisma.sql`p.beds >= ${Number(beds)}`);
     }
 
-    if (baths && baths !== "any") {
+    if (baths && baths !== 'any') {
       whereConditions.push(Prisma.sql`p.baths >= ${Number(baths)}`);
     }
 
@@ -73,20 +73,20 @@ export const getProperties = async (
       );
     }
 
-    if (propertyType && propertyType !== "any") {
+    if (propertyType && propertyType !== 'any') {
       whereConditions.push(
         Prisma.sql`p."propertyType" = ${propertyType}::"PropertyType"`
       );
     }
 
-    if (amenities && amenities !== "any") {
-      const amenitiesArray = (amenities as string).split(",");
+    if (amenities && amenities !== 'any') {
+      const amenitiesArray = (amenities as string).split(',');
       whereConditions.push(Prisma.sql`p.amenities @> ${amenitiesArray}`);
     }
 
-    if (availableFrom && availableFrom !== "any") {
+    if (availableFrom && availableFrom !== 'any') {
       const availableFromDate =
-        typeof availableFrom === "string" ? availableFrom : null;
+        typeof availableFrom === 'string' ? availableFrom : null;
       if (availableFromDate) {
         const date = new Date(availableFromDate);
         if (!isNaN(date.getTime())) {
@@ -135,7 +135,7 @@ export const getProperties = async (
       JOIN "Location" l ON p."locationId" = l.id
       ${
         whereConditions.length > 0
-          ? Prisma.sql`WHERE ${Prisma.join(whereConditions, " AND ")}`
+          ? Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}`
           : Prisma.empty
       }
     `;
@@ -167,7 +167,7 @@ export const getProperty = async (
       const coordinates: { coordinates: string }[] =
         await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
 
-      const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || "");
+      const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
       const longitude = geoJSON.coordinates[0];
       const latitude = geoJSON.coordinates[1];
 
@@ -190,10 +190,7 @@ export const getProperty = async (
   }
 };
 
-export const createProperty = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const createProperty = async (req: Request, res: Response): Promise<void> => {
   try {
     const files = req.files as Express.Multer.File[];
     const {
@@ -206,23 +203,23 @@ export const createProperty = async (
       ...propertyData
     } = req.body;
 
-    // const photoUrls = await Promise.all(
-    //   files.map(async (file) => {
-    //     const uploadParams = {
-    //       Bucket: process.env.S3_BUCKET_NAME!,
-    //       Key: `properties/${Date.now()}-${file.originalname}`,
-    //       Body: file.buffer,
-    //       ContentType: file.mimetype,
-    //     };
+    const photoUrls = await Promise.all(
+      files.map(async (file) => {
+        const uploadParams = {
+          Bucket: process.env.S3_BUCKET_NAME!,
+          Key: `properties/${Date.now()}-${file.originalname}`,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        };
 
-    //     const uploadResult = await new Upload({
-    //       client: s3Client,
-    //       params: uploadParams,
-    //     }).done();
+        const uploadResult = await new Upload({
+          client: s3Client,
+          params: uploadParams,
+        }).done();
 
-    //     return uploadResult.Location;
-    //   })
-    // );
+        return uploadResult.Location;
+      })
+    );
 
     const geocodingUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
       {
@@ -230,13 +227,13 @@ export const createProperty = async (
         city,
         country,
         postalcode: postalCode,
-        format: "json",
-        limit: "1",
+        format: 'json',
+        limit: '1',
       }
     ).toString()}`;
     const geocodingResponse = await axios.get(geocodingUrl, {
       headers: {
-        "User-Agent": "Bolibro-Rentals (bolibro623@gmail.com",
+        'User-Agent': 'Bolibro-Rentals (bolibro623@gmail.com',
       },
     });
     const [longitude, latitude] =
@@ -258,19 +255,19 @@ export const createProperty = async (
     const newProperty = await prisma.property.create({
       data: {
         ...propertyData,
-        // photoUrls,
+        photoUrls,
         locationId: location.id,
         managerCognitoId,
         amenities:
-          typeof propertyData.amenities === "string"
-            ? propertyData.amenities.split(",")
+          typeof propertyData.amenities === 'string'
+            ? propertyData.amenities.split(',')
             : [],
         highlights:
-          typeof propertyData.highlights === "string"
-            ? propertyData.highlights.split(",")
+          typeof propertyData.highlights === 'string'
+            ? propertyData.highlights.split(',')
             : [],
-        isPetsAllowed: propertyData.isPetsAllowed === "true",
-        isParkingIncluded: propertyData.isParkingIncluded === "true",
+        isPetsAllowed: propertyData.isPetsAllowed === 'true',
+        isParkingIncluded: propertyData.isParkingIncluded === 'true',
         pricePerMonth: parseFloat(propertyData.pricePerMonth),
         securityDeposit: parseFloat(propertyData.securityDeposit),
         applicationFee: parseFloat(propertyData.applicationFee),
@@ -291,3 +288,22 @@ export const createProperty = async (
       .json({ message: `Error creating property: ${err.message}` });
   }
 };
+
+// Add global error handler
+// app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+//   console.error(err.stack);
+//   res.status(500).json({
+//     error:
+//       process.env.NODE_ENV === 'production'
+//         ? 'Internal Server Error'
+//         : err.message,
+//   });
+// });
+
+// const validateRequest = (req: Request, res: Response, next: NextFunction) => {
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return res.status(400).json({ errors: errors.array() });
+//   }
+//   next();
+// };
