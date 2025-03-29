@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { wktToGeoJSON } from "@terraformer/wkt";
-import { S3Client } from "@aws-sdk/client-s3";
-import { Location } from "@prisma/client";
-import { Upload } from "@aws-sdk/lib-storage";
-import axios from "axios";
+import { Request, Response } from 'express';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { wktToGeoJSON } from '@terraformer/wkt';
+import { S3Client } from '@aws-sdk/client-s3';
+import { Location } from '@prisma/client';
+import { Upload } from '@aws-sdk/lib-storage';
+import axios from 'axios';
 
 const prisma = new PrismaClient();
 
@@ -104,16 +104,20 @@ export const getProperties = async (
     if (latitude && longitude) {
       const lat = parseFloat(latitude as string);
       const lng = parseFloat(longitude as string);
-      const radiusInKilometers = 1000;
-      const degrees = radiusInKilometers / 111; // Converts kilometers to degrees
 
-      whereConditions.push(
-        Prisma.sql`ST_DWithin(
-          l.coordinates::geometry,
-          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
-          ${degrees}
-        )`
-      );
+      // Only add the location filter if lat/lng are valid numbers
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const radiusInKilometers = 1000;
+        const degrees = radiusInKilometers / 111; // Converts kilometers to degrees
+
+        whereConditions.push(
+          Prisma.sql`ST_DWithin(
+            l.coordinates::geometry,
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
+            ${degrees}
+          )`
+        );
+      }
     }
 
     const completeQuery = Prisma.sql`
@@ -190,8 +194,14 @@ export const getProperty = async (
   }
 };
 
-export const createProperty = async (req: Request, res: Response): Promise<void> => {
+export const createProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
+    console.log('Creating property with data:', req.body); //I added this to check s3 error
+    console.log('Files received:', req.files);
+
     const files = req.files as Express.Multer.File[];
     const {
       address,
@@ -203,6 +213,7 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
       ...propertyData
     } = req.body;
 
+    console.log('Starting image upload to S3...'); //I added this to check s3 error
     const photoUrls = await Promise.all(
       files.map(async (file) => {
         const uploadParams = {
@@ -283,27 +294,72 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
 
     res.status(201).json(newProperty);
   } catch (err: any) {
+    console.error('Error creating property:', err); //I added this to check s3 error
+    console.error('Error stack:', err.stack);
     res
       .status(500)
       .json({ message: `Error creating property: ${err.message}` });
   }
 };
 
-// Add global error handler
-// app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-//   console.error(err.stack);
-//   res.status(500).json({
-//     error:
-//       process.env.NODE_ENV === 'production'
-//         ? 'Internal Server Error'
-//         : err.message,
-//   });
-// });
+export const deleteProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const propertyId = parseInt(req.params.id);
+    const managerCognitoId = req.user?.id;
 
-// const validateRequest = (req: Request, res: Response, next: NextFunction) => {
-//   const errors = validationResult(req);
-//   if (!errors.isEmpty()) {
-//     return res.status(400).json({ errors: errors.array() });
-//   }
-//   next();
-// };
+    if (!managerCognitoId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    // First check if the property exists and belongs to the manager
+    const property = await prisma.property.findFirst({
+      where: {
+        id: propertyId,
+        managerCognitoId,
+      },
+    });
+
+    if (!property) {
+      res.status(404).json({
+        message:
+          'Property not found or you do not have permission to delete it',
+      });
+      return;
+    }
+
+    // Check if the property has active leases
+    const activeLeases = await prisma.lease.findMany({
+      where: {
+        propertyId,
+        endDate: {
+          gte: new Date(),
+        },
+      },
+    });
+
+    if (activeLeases.length > 0) {
+      res
+        .status(400)
+        .json({ message: 'Cannot delete property with active leases' });
+      return;
+    }
+
+    // Delete the property
+    await prisma.property.delete({
+      where: {
+        id: propertyId,
+      },
+    });
+
+    res.status(200).json({ message: 'Property deleted successfully' });
+  } catch (err: any) {
+    console.error('Error deleting property:', err);
+    res
+      .status(500)
+      .json({ message: `Error deleting property: ${err.message}` });
+  }
+};

@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '*.amazonaws.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.openstreetmap.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'nominatim.openstreetmap.org',
         port: '',
         pathname: '/**',
       },

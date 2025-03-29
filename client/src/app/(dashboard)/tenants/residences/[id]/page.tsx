@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import Loading from "@/components/Loading";
+import Loading from '@/components/Loading';
 import {
   Table,
   TableBody,
@@ -8,14 +8,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   useGetAuthUserQuery,
   useGetLeasesQuery,
   useGetPaymentsQuery,
   useGetPropertyQuery,
-} from "@/state/api";
-import { Lease, Payment, Property } from "@/types/prismaTypes";
+} from '@/state/api';
+import { Lease, Payment, Property } from '@/types/prismaTypes';
 import {
   ArrowDownToLineIcon,
   Check,
@@ -26,9 +26,10 @@ import {
   Mail,
   MapPin,
   User,
-} from "lucide-react";
-import { useParams } from "next/navigation";
-import React from "react";
+} from 'lucide-react';
+import { useParams } from 'next/navigation';
+import React, { useState } from 'react';
+import Image from 'next/image';
 
 const PaymentMethod = () => {
   return (
@@ -82,11 +83,24 @@ const ResidenceCard = ({
   property: Property;
   currentLease: Lease;
 }) => {
+  const [imgSrc, setImgSrc] = useState(
+    property.photoUrls?.[0] || '/placeholder.jpg'
+  );
+
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden p-6 flex-1 flex flex-col justify-between">
       {/* Header */}
       <div className="flex gap-5">
-        <div className="w-64 h-32 object-cover bg-slate-500 rounded-xl"></div>
+        <div className="w-64 h-32 relative rounded-xl overflow-hidden">
+          <Image
+            src={imgSrc}
+            alt={property.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            onError={() => setImgSrc('/placeholder.jpg')}
+          />
+        </div>
 
         <div className="flex flex-col justify-between">
           <div>
@@ -103,7 +117,7 @@ const ResidenceCard = ({
             </div>
           </div>
           <div className="text-xl font-bold">
-            ${currentLease.rent}{" "}
+            ${currentLease.rent}{' '}
             <span className="text-gray-500 text-sm font-normal">/ night</span>
           </div>
         </div>
@@ -186,22 +200,22 @@ const BillingHistory = ({ payments }: { payments: Payment[] }) => {
                 <TableCell className="font-medium">
                   <div className="flex items-center">
                     <FileText className="w-4 h-4 mr-2" />
-                    Invoice #{payment.id} -{" "}
-                    {new Date(payment.paymentDate).toLocaleString("default", {
-                      month: "short",
-                      year: "numeric",
+                    Invoice #{payment.id} -{' '}
+                    {new Date(payment.paymentDate).toLocaleString('default', {
+                      month: 'short',
+                      year: 'numeric',
                     })}
                   </div>
                 </TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold border ${
-                      payment.paymentStatus === "Paid"
-                        ? "bg-green-100 text-green-800 border-green-300"
-                        : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                      payment.paymentStatus === 'Paid'
+                        ? 'bg-green-100 text-green-800 border-green-300'
+                        : 'bg-yellow-100 text-yellow-800 border-yellow-300'
                     }`}
                   >
-                    {payment.paymentStatus === "Paid" ? (
+                    {payment.paymentStatus === 'Paid' ? (
                       <Check className="w-4 h-4 inline-block mr-1" />
                     ) : null}
                     {payment.paymentStatus}
@@ -236,7 +250,7 @@ const Residence = () => {
   } = useGetPropertyQuery(Number(id));
 
   const { data: leases, isLoading: leasesLoading } = useGetLeasesQuery(
-    parseInt(authUser?.cognitoInfo?.userId || "0"),
+    parseInt(authUser?.cognitoInfo?.userId || '0'),
     { skip: !authUser?.cognitoInfo?.userId }
   );
   const { data: payments, isLoading: paymentsLoading } = useGetPaymentsQuery(

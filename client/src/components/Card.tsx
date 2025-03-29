@@ -1,7 +1,7 @@
-import { Bath, Bed, Heart, House, Star } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import React, { useState } from "react";
+import { Bath, Bed, Heart, House, Star, Trash2 } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import React, { useState } from 'react';
 
 const Card = ({
   property,
@@ -9,10 +9,18 @@ const Card = ({
   onFavoriteToggle,
   showFavoriteButton = true,
   propertyLink,
+  isManager = false,
+  onDelete,
 }: CardProps) => {
   const [imgSrc, setImgSrc] = useState(
-    property.photoUrls?.[0] || "/placeholder.jpg"
+    property.photoUrls?.[0] || '/placeholder.jpg'
   );
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onDelete) onDelete(property.id);
+  };
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-lg w-full mb-5">
@@ -24,7 +32,7 @@ const Card = ({
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            onError={() => setImgSrc("/placeholder.jpg")}
+            onError={() => setImgSrc('/placeholder.jpg')}
           />
         </div>
         <div className="absolute bottom-4 left-4 flex gap-2">
@@ -39,18 +47,29 @@ const Card = ({
             </span>
           )}
         </div>
-        {showFavoriteButton && (
-          <button
-            className="absolute bottom-4 right-4 bg-white hover:bg-white/90 rounded-full p-2 cursor-pointer"
-            onClick={onFavoriteToggle}
-          >
-            <Heart
-              className={`w-5 h-5 ${
-                isFavorite ? "text-red-500 fill-red-500" : "text-gray-600"
-              }`}
-            />
-          </button>
-        )}
+        <div className="absolute bottom-4 right-4 flex gap-2">
+          {showFavoriteButton && (
+            <button
+              className="bg-white hover:bg-white/90 rounded-full p-2 cursor-pointer"
+              onClick={onFavoriteToggle}
+            >
+              <Heart
+                className={`w-5 h-5 ${
+                  isFavorite ? 'text-red-500 fill-red-500' : 'text-gray-600'
+                }`}
+              />
+            </button>
+          )}
+          {isManager && onDelete && (
+            <button
+              className="bg-white hover:bg-red-100 rounded-full p-2 cursor-pointer"
+              onClick={handleDelete}
+              title="Delete property"
+            >
+              <Trash2 className="w-5 h-5 text-red-500" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="p-4">
         <h2 className="text-xl font-bold mb-1">
@@ -80,7 +99,7 @@ const Card = ({
             </span>
           </div>
           <p className="text-lg font-bold mb-3">
-            ${property.pricePerMonth.toFixed(0)}{" "}
+            ${property.pricePerMonth.toFixed(0)}{' '}
             <span className="text-gray-600 text-base font-normal"> /month</span>
           </p>
         </div>

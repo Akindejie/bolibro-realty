@@ -1,55 +1,123 @@
-"use client";
+'use client';
 
-import { CustomFormField } from "@/components/FormField";
-import Header from "@/components/Header";
-import { Form } from "@/components/ui/form";
-import { PropertyFormData, propertySchema } from "@/lib/schemas";
-import { useCreatePropertyMutation, useGetAuthUserQuery } from "@/state/api";
-import { AmenityEnum, HighlightEnum, PropertyTypeEnum } from "@/lib/constants";
-import { zodResolver } from "@hookform/resolvers/zod";
-import React from "react";
-import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
+import { CustomFormField } from '@/components/FormField';
+import Header from '@/components/Header';
+import { Form } from '@/components/ui/form';
+import { PropertyFormData, propertySchema } from '@/lib/schemas';
+import { useCreatePropertyMutation, useGetAuthUserQuery } from '@/state/api';
+import { AmenityEnum, HighlightEnum, PropertyTypeEnum } from '@/lib/constants';
+import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { Input } from '@/components/ui/input';
+import { Loader2 } from 'lucide-react';
 
 const NewProperty = () => {
-  const [createProperty] = useCreatePropertyMutation();
+  const [createProperty, { isLoading: isSubmitting, isSuccess }] =
+    useCreatePropertyMutation();
   const { data: authUser } = useGetAuthUserQuery();
+  const router = useRouter();
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [addressSearch, setAddressSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const form = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
     defaultValues: {
-      name: "",
-      description: "",
+      name: '',
+      description: '',
       pricePerMonth: 1000,
       securityDeposit: 500,
       applicationFee: 100,
       isPetsAllowed: true,
       isParkingIncluded: true,
       photoUrls: [],
-      amenities: "",
-      highlights: "",
+      amenities: '',
+      highlights: '',
       beds: 1,
       baths: 1,
       squareFeet: 1000,
-      address: "",
-      city: "",
-      state: "",
-      country: "",
-      postalCode: "",
+      propertyType: PropertyTypeEnum.Apartment,
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+      postalCode: '',
     },
   });
 
+  useEffect(() => {
+    if (isSuccess) {
+      router.push('/managers/properties');
+    }
+  }, [isSuccess, router]);
+
+  const searchAddress = async (query: string) => {
+    if (!query || query.length < 3) return;
+
+    setIsSearching(true);
+    try {
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+          query
+        )}&format=json&addressdetails=1&limit=5`,
+        {
+          headers: {
+            'User-Agent': 'Bolibro-Rentals (bolibro623@gmail.com)',
+          },
+        }
+      );
+      setAddressSuggestions(response.data);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error('Error searching address:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setAddressSearch(query);
+
+    const debouncedSearch = setTimeout(() => {
+      searchAddress(query);
+    }, 500);
+
+    return () => clearTimeout(debouncedSearch);
+  };
+
+  const selectAddress = (suggestion: any) => {
+    const address = suggestion.address;
+
+    form.setValue('address', suggestion.display_name.split(',')[0] || '');
+    form.setValue(
+      'city',
+      address.city || address.town || address.village || ''
+    );
+    form.setValue('state', address.state || '');
+    form.setValue('country', address.country || '');
+    form.setValue('postalCode', address.postcode || '');
+
+    setShowSuggestions(false);
+    setAddressSearch(suggestion.display_name);
+  };
+
   const onSubmit = async (data: PropertyFormData) => {
     if (!authUser?.cognitoInfo?.userId) {
-      throw new Error("No manager ID found");
+      throw new Error('No manager ID found');
     }
 
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-      if (key === "photoUrls") {
+      if (key === 'photoUrls') {
         const files = value as File[];
         files.forEach((file: File) => {
-          formData.append("photos", file);
+          formData.append('photos', file);
         });
       } else if (Array.isArray(value)) {
         formData.append(key, JSON.stringify(value));
@@ -58,7 +126,7 @@ const NewProperty = () => {
       }
     });
 
-    formData.append("managerCognitoId", authUser.cognitoInfo.userId);
+    formData.append('managerCognitoId', authUser.cognitoInfo.userId);
 
     await createProperty(formData);
   };
@@ -205,31 +273,64 @@ const NewProperty = () => {
 
             {/* Additional Information */}
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Additional Information
-              </h2>
-              <CustomFormField name="address" label="Address" />
-              <div className="flex justify-between gap-4">
-                <CustomFormField name="city" label="City" className="w-full" />
-                <CustomFormField
-                  name="state"
-                  label="State"
-                  className="w-full"
-                />
-                <CustomFormField
-                  name="postalCode"
-                  label="Postal Code"
-                  className="w-full"
-                />
+              <h2 className="text-lg font-semibold mb-4">Property Location</h2>
+
+              {/* Address Search with Suggestions */}
+              <div className="relative mb-4">
+                <label className="text-sm font-medium mb-1 block">
+                  Search Address
+                </label>
+                <div className="relative">
+                  <Input
+                    value={addressSearch}
+                    onChange={handleAddressInputChange}
+                    placeholder="Type to search address"
+                    className="w-full p-4 border border-gray-200"
+                  />
+                  {isSearching && (
+                    <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 animate-spin" />
+                  )}
+                </div>
+
+                {showSuggestions && addressSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                    {addressSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectAddress(suggestion)}
+                      >
+                        {suggestion.display_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <CustomFormField name="country" label="Country" />
+
+              <div className="grid grid-cols-1 gap-4">
+                <CustomFormField name="address" label="Address" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <CustomFormField name="city" label="City" />
+                  <CustomFormField name="state" label="State" />
+                  <CustomFormField name="postalCode" label="Postal Code" />
+                </div>
+                <CustomFormField name="country" label="Country" />
+              </div>
             </div>
 
             <Button
               type="submit"
               className="bg-primary-700 text-white w-full mt-8"
+              disabled={isSubmitting}
             >
-              Create Property
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating Property...
+                </>
+              ) : (
+                'Create Property'
+              )}
             </Button>
           </form>
         </Form>

@@ -1,11 +1,15 @@
-"use client";
+'use client';
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
-import React, { useState } from "react";
+import { useGetPropertyQuery } from '@/state/api';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
+import React, { useState } from 'react';
 
-const ImagePreviews = ({ images }: ImagePreviewsProps) => {
+const ImagePreviews = ({ propertyId }: { propertyId: number }) => {
+  const { data: property } = useGetPropertyQuery(propertyId);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const images = property?.photoUrls?.length ? property.photoUrls : [];
 
   const handlePrev = () => {
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -17,11 +21,11 @@ const ImagePreviews = ({ images }: ImagePreviewsProps) => {
 
   return (
     <div className="relative h-[450px] w-full">
-      {images.map((image, index) => (
+      {images.map((image: string, index: number) => (
         <div
           key={image}
           className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-            index === currentImageIndex ? "opacity-100" : "opacity-0"
+            index === currentImageIndex ? 'opacity-100' : 'opacity-0'
           }`}
         >
           <Image

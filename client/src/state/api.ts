@@ -92,8 +92,8 @@ export const api = createApi({
           amenities: filters.amenities?.join(','),
           availableFrom: filters.availableFrom,
           favoriteIds: filters.favoriteIds?.join(','),
-          latitude: filters.coordinates?.[1],
-          longitude: filters.coordinates?.[0],
+          latitude: filters.coordinates?.[1] || null,
+          longitude: filters.coordinates?.[0] || null,
         });
 
         return { url: 'properties', params };
@@ -118,6 +118,20 @@ export const api = createApi({
       async onQueryStarted(_, { queryFulfilled }) {
         await withToast(queryFulfilled, {
           error: 'Failed to load property details.',
+        });
+      },
+    }),
+
+    deleteProperty: build.mutation<{ message: string }, number>({
+      query: (propertyId) => ({
+        url: `properties/${propertyId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Properties'],
+      async onQueryStarted(_, { queryFulfilled }) {
+        await withToast(queryFulfilled, {
+          success: 'Property deleted successfully!',
+          error: 'Failed to delete property.',
         });
       },
     }),
@@ -368,4 +382,5 @@ export const {
   useGetApplicationsQuery,
   useUpdateApplicationStatusMutation,
   useCreateApplicationMutation,
+  useDeletePropertyMutation,
 } = api;

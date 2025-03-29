@@ -3,24 +3,24 @@ import {
   setFilters,
   setViewMode,
   toggleFiltersFullOpen,
-} from "@/state";
-import { useAppSelector } from "@/state/redux";
-import { usePathname, useRouter } from "next/navigation";
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { debounce } from "lodash";
-import { cleanParams, cn, formatPriceValue } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Filter, Grid, List, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+} from '@/state';
+import { useAppSelector } from '@/state/redux';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { debounce } from 'lodash';
+import { cleanParams, cn, formatPriceValue } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Filter, Grid, List, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { PropertyTypeIcons } from "@/lib/constants";
+} from '@/components/ui/select';
+import { PropertyTypeIcons } from '@/lib/constants';
 
 const FiltersBar = () => {
   const dispatch = useDispatch();
@@ -31,7 +31,7 @@ const FiltersBar = () => {
     (state) => state.global.isFiltersFullOpen
   );
   const viewMode = useAppSelector((state) => state.global.viewMode);
-  const [searchInput, setSearchInput] = useState(filters.location);
+  const [searchInput, setSearchInput] = useState(filters.location || '');
 
   const updateURL = debounce((newFilters: FiltersState) => {
     const cleanFilters = cleanParams(newFilters);
@@ -40,7 +40,7 @@ const FiltersBar = () => {
     Object.entries(cleanFilters).forEach(([key, value]) => {
       updatedSearchParams.set(
         key,
-        Array.isArray(value) ? value.join(",") : value.toString()
+        Array.isArray(value) ? value.join(',') : value.toString()
       );
     });
 
@@ -54,17 +54,17 @@ const FiltersBar = () => {
   ) => {
     let newValue = value;
 
-    if (key === "priceRange" || key === "squareFeet") {
+    if (key === 'priceRange' || key === 'squareFeet') {
       const currentArrayRange = [...filters[key]];
       if (isMin !== null) {
         const index = isMin ? 0 : 1;
-        currentArrayRange[index] = value === "any" ? null : Number(value);
+        currentArrayRange[index] = value === 'any' ? null : Number(value);
       }
       newValue = currentArrayRange;
-    } else if (key === "coordinates") {
-      newValue = value === "any" ? [0, 0] : value.map(Number);
+    } else if (key === 'coordinates') {
+      newValue = value === 'any' ? [0, 0] : value.map(Number);
     } else {
-      newValue = value === "any" ? "any" : value;
+      newValue = value === 'any' ? 'any' : value;
     }
 
     const newFilters = { ...filters, [key]: newValue };
@@ -92,7 +92,7 @@ const FiltersBar = () => {
         );
       }
     } catch (err) {
-      console.error("Error search location:", err);
+      console.error('Error search location:', err);
     }
   };
 
@@ -104,8 +104,8 @@ const FiltersBar = () => {
         <Button
           variant="outline"
           className={cn(
-            "gap-2 rounded-xl border-primary-400 hover:bg-primary-500 hover:text-primary-100",
-            isFiltersFullOpen && "bg-primary-700 text-primary-100"
+            'gap-2 rounded-xl border-primary-400 hover:bg-primary-500 hover:text-primary-100',
+            isFiltersFullOpen && 'bg-primary-700 text-primary-100'
           )}
           onClick={() => dispatch(toggleFiltersFullOpen())}
         >
@@ -134,9 +134,9 @@ const FiltersBar = () => {
         <div className="flex gap-1">
           {/* Minimum Price Selector */}
           <Select
-            value={filters.priceRange[0]?.toString() || "any"}
+            value={filters.priceRange[0]?.toString() || 'any'}
             onValueChange={(value) =>
-              handleFilterChange("priceRange", value, true)
+              handleFilterChange('priceRange', value, true)
             }
           >
             <SelectTrigger className="w-22 rounded-xl border-primary-400">
@@ -156,9 +156,9 @@ const FiltersBar = () => {
 
           {/* Maximum Price Selector */}
           <Select
-            value={filters.priceRange[1]?.toString() || "any"}
+            value={filters.priceRange[1]?.toString() || 'any'}
             onValueChange={(value) =>
-              handleFilterChange("priceRange", value, false)
+              handleFilterChange('priceRange', value, false)
             }
           >
             <SelectTrigger className="w-22 rounded-xl border-primary-400">
@@ -182,7 +182,7 @@ const FiltersBar = () => {
           {/* Beds */}
           <Select
             value={filters.beds}
-            onValueChange={(value) => handleFilterChange("beds", value, null)}
+            onValueChange={(value) => handleFilterChange('beds', value, null)}
           >
             <SelectTrigger className="w-26 rounded-xl border-primary-400">
               <SelectValue placeholder="Beds" />
@@ -199,7 +199,7 @@ const FiltersBar = () => {
           {/* Baths */}
           <Select
             value={filters.baths}
-            onValueChange={(value) => handleFilterChange("baths", value, null)}
+            onValueChange={(value) => handleFilterChange('baths', value, null)}
           >
             <SelectTrigger className="w-26 rounded-xl border-primary-400">
               <SelectValue placeholder="Baths" />
@@ -215,9 +215,9 @@ const FiltersBar = () => {
 
         {/* Property Type */}
         <Select
-          value={filters.propertyType || "any"}
+          value={filters.propertyType || 'any'}
           onValueChange={(value) =>
-            handleFilterChange("propertyType", value, null)
+            handleFilterChange('propertyType', value, null)
           }
         >
           <SelectTrigger className="w-32 rounded-xl border-primary-400">
@@ -243,20 +243,20 @@ const FiltersBar = () => {
           <Button
             variant="ghost"
             className={cn(
-              "px-3 py-1 rounded-none rounded-l-xl hover:bg-primary-600 hover:text-primary-50",
-              viewMode === "list" ? "bg-primary-700 text-primary-50" : ""
+              'px-3 py-1 rounded-none rounded-l-xl hover:bg-primary-600 hover:text-primary-50',
+              viewMode === 'list' ? 'bg-primary-700 text-primary-50' : ''
             )}
-            onClick={() => dispatch(setViewMode("list"))}
+            onClick={() => dispatch(setViewMode('list'))}
           >
             <List className="w-5 h-5" />
           </Button>
           <Button
             variant="ghost"
             className={cn(
-              "px-3 py-1 rounded-none rounded-r-xl hover:bg-primary-600 hover:text-primary-50",
-              viewMode === "grid" ? "bg-primary-700 text-primary-50" : ""
+              'px-3 py-1 rounded-none rounded-r-xl hover:bg-primary-600 hover:text-primary-50',
+              viewMode === 'grid' ? 'bg-primary-700 text-primary-50' : ''
             )}
-            onClick={() => dispatch(setViewMode("grid"))}
+            onClick={() => dispatch(setViewMode('grid'))}
           >
             <Grid className="w-5 h-5" />
           </Button>
