@@ -1,6 +1,8 @@
 'use client';
 
 import Loading from '@/components/Loading';
+import Header from '@/components/Header';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   Table,
   TableBody,
@@ -265,8 +267,21 @@ const Residence = () => {
     (lease) => lease.propertyId === property.id
   );
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/tenants/favorites' },
+    { label: 'Residences', href: '/tenants/residences' },
+    { label: property.name, href: `/tenants/residences/${id}` },
+  ];
+
   return (
     <div className="dashboard-container">
+      <Breadcrumbs items={breadcrumbItems} />
+      <Header
+        title={property.name}
+        subtitle={`${property.location.city}, ${property.location.country}`}
+        showBackButton
+        backButtonDestination="/tenants/residences"
+      />
       <div className="w-full mx-auto">
         <div className="md:flex gap-10">
           {currentLease && (

@@ -53,6 +53,12 @@ declare global {
     Cottage = 'Cottage',
   }
 
+  type PropertyStatus =
+    | 'Available'
+    | 'Rented'
+    | 'UnderMaintenance'
+    | 'Inactive';
+
   interface SidebarLinkProps {
     href: string;
     icon: LucideIcon;
@@ -103,6 +109,7 @@ declare global {
     propertyLink?: string;
     isManager?: boolean;
     onDelete?: (propertyId: number) => void;
+    onEdit?: (propertyId: number) => void;
   }
 
   interface CardCompactProps {
@@ -136,6 +143,42 @@ declare global {
     cognitoInfo: AuthUser;
     userInfo: Tenant | Manager;
     userRole: JsonObject | JsonPrimitive | JsonArray;
+  }
+
+  interface Property {
+    id: number;
+    name: string;
+    description: string;
+    location: {
+      id: number;
+      address: string;
+      city: string;
+      state: string;
+      country: string;
+      postalCode: string;
+      coordinates: {
+        longitude: number;
+        latitude: number;
+      };
+    };
+    pricePerMonth: number;
+    securityDeposit: number;
+    applicationFee: number;
+    photoUrls: string[];
+    images?: string[];
+    amenities: string[];
+    highlights: string[];
+    isPetsAllowed: boolean;
+    isParkingIncluded: boolean;
+    beds: number;
+    baths: number;
+    squareFeet: number;
+    propertyType: string;
+    status: PropertyStatus;
+    postedDate: string;
+    averageRating: number;
+    numberOfReviews: number;
+    managerCognitoId: string;
   }
 }
 

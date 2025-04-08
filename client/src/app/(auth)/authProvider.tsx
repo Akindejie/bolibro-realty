@@ -12,6 +12,7 @@ import {
 } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import { useRouter, usePathname } from 'next/navigation';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 // https://docs.amplify.aws/gen1/javascript/tools/libraries/configure-categories/
 Amplify.configure({
@@ -151,7 +152,30 @@ const Auth = ({ children }: { children: React.ReactNode }) => {
   // Redirect authenticated users away from auth pages
   useEffect(() => {
     if (user && isAuthPage) {
-      router.push('/');
+      // Check user role directly from token and redirect accordingly
+      const checkRole = async () => {
+        try {
+          const session = await fetchAuthSession();
+          const { idToken } = session.tokens ?? {};
+          const userRole = idToken?.payload['custom:role'] as string;
+
+          console.log('Auth provider - User role from token:', userRole);
+
+          if (userRole?.toLowerCase() === 'manager') {
+            // Directly redirect managers to properties page
+            router.push('/managers/properties');
+          } else {
+            // Redirect tenants to home page
+            router.push('/');
+          }
+        } catch (err) {
+          console.error('Error checking user role:', err);
+          // Fallback to homepage
+          router.push('/');
+        }
+      };
+
+      checkRole();
     }
   }, [user, isAuthPage, router]);
 

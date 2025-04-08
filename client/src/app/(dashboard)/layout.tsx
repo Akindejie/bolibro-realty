@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import Navbar from "@/components/Navbar";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import Sidebar from "@/components/AppSidebar";
-import { NAVBAR_HEIGHT } from "@/lib/constants";
-import React from "react";
-import { useGetAuthUserQuery } from "@/state/api";
+import Navbar from '@/components/Navbar';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import Sidebar from '@/components/AppSidebar';
+import { NAVBAR_HEIGHT } from '@/lib/constants';
+import React from 'react';
+import { useGetAuthUserQuery } from '@/state/api';
 import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from 'next/navigation';
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const { data: authUser, isLoading:authLoading } = useGetAuthUserQuery();
+  const { data: authUser, isLoading: authLoading } = useGetAuthUserQuery();
   const router = useRouter();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
@@ -18,21 +18,38 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (authUser) {
       const userRole = authUser.userRole?.toLowerCase();
+      console.log('Dashboard layout - User role:', userRole);
+      console.log('Current pathname:', pathname);
+
       if (
-        (userRole === "manager" && pathname.startsWith("/tenants")) ||
-        (userRole === "tenant" && pathname.startsWith("/managers"))
+        (userRole === 'manager' && pathname.startsWith('/tenants')) ||
+        (userRole === 'tenant' && pathname.startsWith('/managers'))
       ) {
+        console.log(
+          'Redirecting to appropriate dashboard:',
+          userRole === 'manager' ? '/managers/properties' : '/tenants/favorites'
+        );
+
+        // Redirect to correct dashboard section
         router.push(
-          userRole === "manager"
-            ? "/managers/properties"
-            : "/tenants/favorites",
+          userRole === 'manager'
+            ? '/managers/properties'
+            : '/tenants/favorites',
           { scroll: false }
         );
+        // Keep loading state true until redirection completes
+      } else if (userRole === 'manager' && pathname === '/managers') {
+        // Redirect from /managers to /managers/properties
+        console.log('Redirecting from /managers to /managers/properties');
+        router.push('/managers/properties', { scroll: false });
       } else {
+        console.log('User is in the correct dashboard section');
         setIsLoading(false);
       }
+    } else if (!authLoading) {
+      setIsLoading(false);
     }
-  }, [authUser, router, pathname]);
+  }, [authUser, authLoading, router, pathname]);
 
   if (authLoading || isLoading) return <>Loading...</>;
   if (!authUser?.userRole) return null;

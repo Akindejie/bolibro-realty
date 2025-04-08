@@ -1,6 +1,7 @@
 'use client';
 
 import SettingsForm from '@/components/SettingsForm';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   useGetAuthUserQuery,
   useUpdateTenantSettingsMutation,
@@ -26,12 +27,20 @@ const TenantSettings = () => {
     });
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/tenants/favorites' },
+    { label: 'Settings', href: '/tenants/settings' },
+  ];
+
   return (
-    <SettingsForm
-      initialData={initialData}
-      onSubmit={handleSubmit}
-      userType="tenant"
-    />
+    <div className="dashboard-container">
+      <Breadcrumbs items={breadcrumbItems} />
+      <SettingsForm
+        initialData={initialData}
+        onSubmit={handleSubmit}
+        userType="tenant"
+      />
+    </div>
   );
 };
 

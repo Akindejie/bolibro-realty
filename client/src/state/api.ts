@@ -10,6 +10,7 @@ import {
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { FiltersState } from '.';
+import { toast } from 'react-hot-toast';
 
 export const api = createApi({
   baseQuery: fetchBaseQuery({
@@ -233,7 +234,7 @@ export const api = createApi({
           : [{ type: 'Properties', id: 'LIST' }],
       async onQueryStarted(_, { queryFulfilled }) {
         await withToast(queryFulfilled, {
-          error: 'Failed to load manager profile.',
+          error: 'Failed to load manager properties.',
         });
       },
     }),
@@ -257,15 +258,12 @@ export const api = createApi({
     }),
 
     createProperty: build.mutation<Property, FormData>({
-      query: (newProperty) => ({
-        url: `properties`,
+      query: (data) => ({
+        url: 'properties',
         method: 'POST',
-        body: newProperty,
+        body: data,
       }),
-      invalidatesTags: (result) => [
-        { type: 'Properties', id: 'LIST' },
-        { type: 'Managers', id: result?.manager?.id },
-      ],
+      invalidatesTags: [{ type: 'Properties', id: 'LIST' }],
       async onQueryStarted(_, { queryFulfilled }) {
         await withToast(queryFulfilled, {
           success: 'Property created successfully!',
@@ -274,7 +272,88 @@ export const api = createApi({
       },
     }),
 
-    // lease related enpoints
+    updateProperty: build.mutation<Property, { id: number; data: FormData }>({
+      query: ({ id, data }) => ({
+        url: `properties/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Properties', id },
+        { type: 'Properties', id: 'LIST' },
+        { type: 'PropertyDetails', id },
+      ],
+      async onQueryStarted(_, { dispatch, queryFulfilled }) {
+        try {
+          toast.loading('Updating property...', { id: 'updateProperty' });
+          await queryFulfilled;
+          toast.success('Property updated successfully!', {
+            id: 'updateProperty',
+          });
+        } catch (error: any) {
+          console.error('Update property error:', error);
+          const errorMessage =
+            error?.error?.data?.message || 'Failed to update property.';
+          toast.error(errorMessage, { id: 'updateProperty' });
+        }
+      },
+    }),
+
+    updatePropertyStatus: build.mutation<
+      Property,
+      { id: number; status: PropertyStatus }
+    >({
+      query: ({ id, status }) => ({
+        url: `properties/${id}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Properties', id },
+        { type: 'Properties', id: 'LIST' },
+        { type: 'PropertyDetails', id },
+      ],
+      async onQueryStarted(_, { queryFulfilled }) {
+        await withToast(queryFulfilled, {
+          success: 'Property status updated successfully!',
+          error: 'Failed to update property status.',
+        });
+      },
+    }),
+
+    updateBulkPropertyStatus: build.mutation<
+      { message: string; properties: Property[] },
+      { propertyIds: number[]; status: PropertyStatus }
+    >({
+      query: (data) => ({
+        url: 'properties/bulk-status-update',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: ['Properties'],
+      async onQueryStarted(_, { queryFulfilled }) {
+        await withToast(queryFulfilled, {
+          success: 'Properties updated successfully!',
+          error: 'Failed to update properties.',
+        });
+      },
+    }),
+
+    removeProperty: build.mutation<void, number>({
+      query: (id) => ({
+        url: `properties/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'Properties', id: 'LIST' }],
+      async onQueryStarted(_, { queryFulfilled }) {
+        await withToast(queryFulfilled, {
+          success: 'Property deleted successfully!',
+          error: 'Failed to delete property.',
+        });
+      },
+    }),
+
+    // lease related endpoints
     getLeases: build.query<Lease[], number>({
       query: () => 'leases',
       providesTags: ['Leases'],
@@ -361,6 +440,105 @@ export const api = createApi({
         });
       },
     }),
+
+    uploadPropertyImages: build.mutation<
+      { imageUrls: string[] },
+      { propertyId: string; images: File[] }
+    >({
+      query: ({ propertyId, images }) => {
+        const formData = new FormData();
+        images.forEach((image) => {
+          formData.append('images', image);
+        });
+
+        return {
+          url: `properties/${propertyId}/images`,
+          method: 'POST',
+          body: formData,
+          formData: true,
+        };
+      },
+      invalidatesTags: (result, error, { propertyId }) => [
+        { type: 'Properties', id: Number(propertyId) },
+        { type: 'PropertyDetails', id: Number(propertyId) },
+        { type: 'Properties', id: 'LIST' },
+      ],
+      async onQueryStarted({ propertyId }, { dispatch, queryFulfilled }) {
+        const toastId = `upload-images-${propertyId}-${Date.now()}`;
+        toast.loading('Uploading images...', { id: toastId });
+
+        try {
+          await queryFulfilled;
+          toast.success('Images uploaded successfully', { id: toastId });
+        } catch (error) {
+          toast.error('Failed to upload images', { id: toastId });
+        }
+      },
+    }),
+
+    updatePropertyImages: build.mutation<
+      { success: boolean; data: any },
+      { propertyId: string; images: string[] }
+    >({
+      query: ({ propertyId, images }) => ({
+        url: `properties/${propertyId}/images`,
+        method: 'PUT',
+        body: { images },
+      }),
+      invalidatesTags: (result, error, { propertyId }) => [
+        { type: 'Properties', id: Number(propertyId) },
+        { type: 'PropertyDetails', id: Number(propertyId) },
+        { type: 'Properties', id: 'LIST' },
+      ],
+      async onQueryStarted({ propertyId }, { dispatch, queryFulfilled }) {
+        const toastId = `update-images-${propertyId}-${Date.now()}`;
+
+        // Get stored property images if they exist
+        const savedImagesStr = localStorage.getItem(
+          `property_${propertyId}_images`
+        );
+
+        try {
+          toast.loading('Updating images...', { id: toastId });
+
+          // If we're offline, don't even try to make the request
+          if (!navigator.onLine) {
+            throw new Error(
+              'You are offline. Changes will sync when you reconnect.'
+            );
+          }
+
+          await queryFulfilled;
+          toast.success('Images updated successfully', { id: toastId });
+
+          // Clear saved images since server update succeeded
+          if (savedImagesStr) {
+            localStorage.removeItem(`property_${propertyId}_images`);
+          }
+        } catch (error) {
+          console.error('Error updating images:', error);
+
+          if (!navigator.onLine) {
+            toast.error(
+              'You are offline. Changes saved locally and will sync when online.',
+              { id: toastId }
+            );
+          } else {
+            toast.error('Failed to update images. Changes saved locally.', {
+              id: toastId,
+            });
+          }
+
+          // Store images locally to retry later
+          if (images && images.length > 0) {
+            localStorage.setItem(
+              `property_${propertyId}_images`,
+              JSON.stringify(images)
+            );
+          }
+        }
+      },
+    }),
   }),
 });
 
@@ -373,6 +551,7 @@ export const {
   useGetCurrentResidencesQuery,
   useGetManagerPropertiesQuery,
   useCreatePropertyMutation,
+  useUpdatePropertyMutation,
   useGetTenantQuery,
   useAddFavoritePropertyMutation,
   useRemoveFavoritePropertyMutation,
@@ -383,4 +562,8 @@ export const {
   useUpdateApplicationStatusMutation,
   useCreateApplicationMutation,
   useDeletePropertyMutation,
+  useUpdatePropertyStatusMutation,
+  useUpdateBulkPropertyStatusMutation,
+  useUploadPropertyImagesMutation,
+  useUpdatePropertyImagesMutation,
 } = api;

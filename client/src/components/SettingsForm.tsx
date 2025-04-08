@@ -1,10 +1,11 @@
-import { SettingsFormData, settingsSchema } from "@/lib/schemas";
-import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Form } from "./ui/form";
-import { CustomFormField } from "./FormField";
-import { Button } from "./ui/button";
+import { SettingsFormData, settingsSchema } from '@/lib/schemas';
+import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Form } from './ui/form';
+import { CustomFormField } from './FormField';
+import { Button } from './ui/button';
+import Header from './Header';
 
 const SettingsForm = ({
   initialData,
@@ -31,14 +32,16 @@ const SettingsForm = ({
 
   return (
     <div className="pt-8 pb-5 px-8">
-      <div className="mb-5">
-        <h1 className="text-xl font-semibold">
-          {`${userType.charAt(0).toUpperCase() + userType.slice(1)} Settings`}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage your account preferences and personal information
-        </p>
-      </div>
+      <Header
+        title={`${
+          userType.charAt(0).toUpperCase() + userType.slice(1)
+        } Settings`}
+        subtitle="Manage your account preferences and personal information"
+        showBackButton
+        backButtonDestination={
+          userType === 'manager' ? '/managers/properties' : '/tenants/favorites'
+        }
+      />
       <div className="bg-white rounded-xl p-6">
         <Form {...form}>
           <form
@@ -64,7 +67,7 @@ const SettingsForm = ({
                 onClick={toggleEditMode}
                 className="bg-secondary-500 text-white hover:bg-secondary-600"
               >
-                {editMode ? "Cancel" : "Edit"}
+                {editMode ? 'Cancel' : 'Edit'}
               </Button>
               {editMode && (
                 <Button

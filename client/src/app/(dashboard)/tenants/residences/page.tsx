@@ -1,19 +1,20 @@
-"use client";
+'use client';
 
-import Card from "@/components/Card";
-import Header from "@/components/Header";
-import Loading from "@/components/Loading";
+import Card from '@/components/Card';
+import Header from '@/components/Header';
+import Loading from '@/components/Loading';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   useGetAuthUserQuery,
   useGetCurrentResidencesQuery,
   useGetTenantQuery,
-} from "@/state/api";
-import React from "react";
+} from '@/state/api';
+import React from 'react';
 
 const Residences = () => {
   const { data: authUser } = useGetAuthUserQuery();
   const { data: tenant } = useGetTenantQuery(
-    authUser?.cognitoInfo?.userId || "",
+    authUser?.cognitoInfo?.userId || '',
     {
       skip: !authUser?.cognitoInfo?.userId,
     }
@@ -23,15 +24,21 @@ const Residences = () => {
     data: currentResidences,
     isLoading,
     error,
-  } = useGetCurrentResidencesQuery(authUser?.cognitoInfo?.userId || "", {
+  } = useGetCurrentResidencesQuery(authUser?.cognitoInfo?.userId || '', {
     skip: !authUser?.cognitoInfo?.userId,
   });
 
   if (isLoading) return <Loading />;
   if (error) return <div>Error loading current residences</div>;
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/tenants/favorites' },
+    { label: 'Residences', href: '/tenants/residences' },
+  ];
+
   return (
     <div className="dashboard-container">
+      <Breadcrumbs items={breadcrumbItems} />
       <Header
         title="Current Residences"
         subtitle="View and manage your current living spaces"

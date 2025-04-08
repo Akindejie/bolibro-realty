@@ -90,6 +90,93 @@ export const CustomFormField: React.FC<FormFieldProps> = ({
           />
         );
       case 'select':
+        if (multiple) {
+          // Enhanced multi-select handling
+          const selectedValues = field.value
+            ? typeof field.value === 'string'
+              ? field.value.split(',').filter(Boolean)
+              : Array.isArray(field.value)
+              ? field.value
+              : []
+            : [];
+
+          return (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {selectedValues.map(
+                  (value: string) =>
+                    value && (
+                      <div
+                        key={value}
+                        className="bg-primary/10 text-primary rounded-full px-3 py-1 text-sm flex items-center"
+                      >
+                        <span>
+                          {options?.find((opt) => opt.value === value)?.label ||
+                            value}
+                        </span>
+                        <button
+                          type="button"
+                          className="ml-2 text-gray-500 hover:text-red-500"
+                          onClick={() => {
+                            // Remove this value from the selected values
+                            const newValues = selectedValues.filter(
+                              (v) => v !== value
+                            );
+                            // Update using field.onChange to ensure React Hook Form tracks the change
+                            field.onChange(newValues.join(','));
+                            console.log(
+                              `Removed ${value}, new values:`,
+                              newValues.join(',')
+                            );
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )
+                )}
+              </div>
+
+              <Select
+                onValueChange={(newValue) => {
+                  if (newValue && !selectedValues.includes(newValue)) {
+                    const newValues = [...selectedValues, newValue];
+                    field.onChange(newValues.join(','));
+                    console.log(
+                      `Added ${newValue}, new values:`,
+                      newValues.join(',')
+                    );
+                  }
+                }}
+              >
+                <SelectTrigger
+                  className={`w-full border-gray-200 p-4 ${inputClassName}`}
+                >
+                  <SelectValue
+                    placeholder={placeholder || 'Select options...'}
+                  />
+                </SelectTrigger>
+                <SelectContent className="w-full border-gray-200 shadow max-h-60 overflow-y-auto">
+                  {options?.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className={`cursor-pointer hover:!bg-gray-100 hover:!text-customgreys-darkGrey ${
+                        selectedValues.includes(option.value)
+                          ? 'opacity-50'
+                          : ''
+                      }`}
+                      disabled={selectedValues.includes(option.value)}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        }
+
         return (
           <Select
             value={field.value || (initialValue as string)}
@@ -210,6 +297,7 @@ export const CustomFormField: React.FC<FormFieldProps> = ({
     />
   );
 };
+
 interface MultiInputFieldProps {
   name: string;
   control: any;

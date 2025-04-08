@@ -52,6 +52,13 @@ enum PropertyType {
   Cottage
 }
 
+enum PropertyStatus {
+  Available
+  Rented
+  UnderMaintenance
+  Inactive
+}
+
 enum ApplicationStatus {
   Pending
   Denied
@@ -66,24 +73,26 @@ enum PaymentStatus {
 }
 
 model Property {
-  id                Int          @id @default(autoincrement())
+  id                Int            @id @default(autoincrement())
   name              String
   description       String
   pricePerMonth     Float
   securityDeposit   Float
   applicationFee    Float
   photoUrls         String[]
+  images            String[]       @default([])
   amenities         Amenity[]
   highlights        Highlight[]
-  isPetsAllowed     Boolean      @default(false)
-  isParkingIncluded Boolean      @default(false)
+  isPetsAllowed     Boolean        @default(false)
+  isParkingIncluded Boolean        @default(false)
   beds              Int
   baths             Float
   squareFeet        Int
   propertyType      PropertyType
-  postedDate        DateTime     @default(now())
-  averageRating     Float?       @default(0)
-  numberOfReviews   Int?         @default(0)
+  status            PropertyStatus @default(Available)
+  postedDate        DateTime       @default(now())
+  averageRating     Float?         @default(0)
+  numberOfReviews   Int?           @default(0)
   locationId        Int
   managerCognitoId  String
 

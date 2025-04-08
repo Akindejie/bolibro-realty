@@ -1,19 +1,20 @@
-"use client";
+'use client';
 
-import Card from "@/components/Card";
-import Header from "@/components/Header";
-import Loading from "@/components/Loading";
+import Card from '@/components/Card';
+import Header from '@/components/Header';
+import Loading from '@/components/Loading';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   useGetAuthUserQuery,
   useGetPropertiesQuery,
   useGetTenantQuery,
-} from "@/state/api";
-import React from "react";
+} from '@/state/api';
+import React from 'react';
 
 const Favorites = () => {
   const { data: authUser } = useGetAuthUserQuery();
   const { data: tenant } = useGetTenantQuery(
-    authUser?.cognitoInfo?.userId || "",
+    authUser?.cognitoInfo?.userId || '',
     {
       skip: !authUser?.cognitoInfo?.userId,
     }
@@ -31,8 +32,14 @@ const Favorites = () => {
   if (isLoading) return <Loading />;
   if (error) return <div>Error loading favorites</div>;
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/tenants/favorites' },
+    { label: 'Favorites', href: '/tenants/favorites' },
+  ];
+
   return (
     <div className="dashboard-container">
+      <Breadcrumbs items={breadcrumbItems} />
       <Header
         title="Favorited Properties"
         subtitle="Browse and manage your saved property listings"

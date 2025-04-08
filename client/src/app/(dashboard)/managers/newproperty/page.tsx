@@ -136,6 +136,8 @@ const NewProperty = () => {
       <Header
         title="Add New Property"
         subtitle="Create a new property listing with detailed information"
+        showBackButton
+        backButtonDestination="/managers/properties"
       />
       <div className="bg-white rounded-xl p-6">
         <Form {...form}>

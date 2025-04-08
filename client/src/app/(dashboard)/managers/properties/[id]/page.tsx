@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
-import Header from "@/components/Header";
-import Loading from "@/components/Loading";
+import Header from '@/components/Header';
+import Loading from '@/components/Loading';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import PropertyDetails from '@/components/PropertyDetails';
 import {
   Table,
   TableBody,
@@ -9,19 +11,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   useGetPaymentsQuery,
   useGetPropertyLeasesQuery,
   useGetPropertyQuery,
-} from "@/state/api";
-import { ArrowDownToLine, ArrowLeft, Check, Download } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import React from "react";
+} from '@/state/api';
+import { ArrowDownToLine, Check } from 'lucide-react';
+import Image from 'next/image';
+import { useParams } from 'next/navigation';
+import React from 'react';
 
-const PropertyTenants = () => {
+const PropertyPage = () => {
   const { id } = useParams();
   const propertyId = Number(id);
 
@@ -31,6 +32,15 @@ const PropertyTenants = () => {
     useGetPropertyLeasesQuery(propertyId);
   const { data: payments, isLoading: paymentsLoading } =
     useGetPaymentsQuery(propertyId);
+
+  // Add debugging
+  React.useEffect(() => {
+    if (property) {
+      console.log('Property data:', property);
+      console.log('Property images:', property.images);
+      console.log('Property photoUrls:', property.photoUrls);
+    }
+  }, [property]);
 
   if (propertyLoading || leasesLoading || paymentsLoading) return <Loading />;
 
@@ -42,27 +52,33 @@ const PropertyTenants = () => {
         new Date(payment.dueDate).getMonth() === currentDate.getMonth() &&
         new Date(payment.dueDate).getFullYear() === currentDate.getFullYear()
     );
-    return currentMonthPayment?.paymentStatus || "Not Paid";
+    return currentMonthPayment?.paymentStatus || 'Not Paid';
   };
+
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/managers/properties' },
+    { label: 'Properties', href: '/managers/properties' },
+    {
+      label: property?.name || 'Property Details',
+      href: `/managers/properties/${id}`,
+    },
+  ];
 
   return (
     <div className="dashboard-container">
-      {/* Back to properties page */}
-      <Link
-        href="/managers/properties"
-        className="flex items-center mb-4 hover:text-primary-500"
-        scroll={false}
-      >
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        <span>Back to Properties</span>
-      </Link>
-
+      <Breadcrumbs items={breadcrumbItems} />
       <Header
-        title={property?.name || "My Property"}
-        subtitle="Manage tenants and leases for this property"
+        title={property?.name || 'My Property'}
+        subtitle="Manage property details, tenants and leases"
+        showBackButton
+        backButtonDestination="/managers/properties"
       />
 
       <div className="w-full space-y-6">
+        {/* Property Details */}
+        {property && <PropertyDetails property={property} isEditable={true} />}
+
+        {/* Tenants Section */}
         <div className="mt-8 bg-white rounded-xl shadow-md overflow-hidden p-6">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -76,7 +92,6 @@ const PropertyTenants = () => {
                 className={`bg-white border border-gray-300 text-gray-700 py-2
               px-4 rounded-md flex items-center justify-center hover:bg-primary-700 hover:text-primary-50`}
               >
-                <Download className="w-5 h-5 mr-2" />
                 <span>Download All</span>
               </button>
             </div>
@@ -126,12 +141,12 @@ const PropertyTenants = () => {
                     <TableCell>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          getCurrentMonthPaymentStatus(lease.id) === "Paid"
-                            ? "bg-green-100 text-green-800 border-green-300"
-                            : "bg-red-100 text-red-800 border-red-300"
+                          getCurrentMonthPaymentStatus(lease.id) === 'Paid'
+                            ? 'bg-green-100 text-green-800 border-green-300'
+                            : 'bg-red-100 text-red-800 border-red-300'
                         }`}
                       >
-                        {getCurrentMonthPaymentStatus(lease.id) === "Paid" && (
+                        {getCurrentMonthPaymentStatus(lease.id) === 'Paid' && (
                           <Check className="w-4 h-4 inline-block mr-1" />
                         )}
                         {getCurrentMonthPaymentStatus(lease.id)}
@@ -158,4 +173,4 @@ const PropertyTenants = () => {
   );
 };
 
-export default PropertyTenants;
+export default PropertyPage;

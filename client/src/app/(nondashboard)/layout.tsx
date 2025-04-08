@@ -13,18 +13,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Only set loading to false when we have the auth user info
     if (authUser) {
       const userRole = authUser.userRole?.toLowerCase();
-      if (
-        (userRole === 'manager' && pathname.startsWith('/search')) ||
-        (userRole === 'manager' && pathname === '/')
-      ) {
+      console.log('Non-dashboard layout - User role:', userRole);
+      console.log('Current pathname:', pathname);
+
+      // Only redirect managers if they're not already on a manager route
+      if (userRole === 'manager' && !pathname.includes('/managers/')) {
+        console.log('Redirecting manager to properties page');
         router.push('/managers/properties', { scroll: false });
       } else {
+        // Set loading to false for non-managers or managers already on manager routes
         setIsLoading(false);
       }
+    } else if (!authLoading) {
+      // No authenticated user and not loading auth
+      setIsLoading(false);
     }
-  }, [authUser, router, pathname]);
+  }, [authUser, authLoading, router, pathname]);
 
   if (authLoading || isLoading) return <>Loading...</>;
 

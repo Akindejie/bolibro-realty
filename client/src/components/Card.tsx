@@ -1,7 +1,22 @@
-import { Bath, Bed, Heart, House, Star, Trash2 } from 'lucide-react';
+import { Bath, Bed, Edit, Heart, House, Star, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState } from 'react';
+
+const getStatusColor = (status: PropertyStatus) => {
+  switch (status) {
+    case 'Available':
+      return 'bg-green-100 text-green-800 border-green-300';
+    case 'Rented':
+      return 'bg-blue-100 text-blue-800 border-blue-300';
+    case 'UnderMaintenance':
+      return 'bg-orange-100 text-orange-800 border-orange-300';
+    case 'Inactive':
+      return 'bg-gray-100 text-gray-800 border-gray-300';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-300';
+  }
+};
 
 const Card = ({
   property,
@@ -11,15 +26,26 @@ const Card = ({
   propertyLink,
   isManager = false,
   onDelete,
+  onEdit,
 }: CardProps) => {
+  // Use images field if available, otherwise fallback to photoUrls
+  const propertyImages = property.images?.length
+    ? property.images
+    : property.photoUrls;
   const [imgSrc, setImgSrc] = useState(
-    property.photoUrls?.[0] || '/placeholder.jpg'
+    propertyImages?.[0] || '/placeholder.jpg'
   );
 
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (onDelete) onDelete(property.id);
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onEdit) onEdit(property.id);
   };
 
   return (
@@ -60,6 +86,15 @@ const Card = ({
               />
             </button>
           )}
+          {isManager && onEdit && (
+            <button
+              className="bg-white hover:bg-blue-100 rounded-full p-2 cursor-pointer"
+              onClick={handleEdit}
+              title="Edit property"
+            >
+              <Edit className="w-5 h-5 text-blue-500" />
+            </button>
+          )}
           {isManager && onDelete && (
             <button
               className="bg-white hover:bg-red-100 rounded-full p-2 cursor-pointer"
@@ -72,19 +107,30 @@ const Card = ({
         </div>
       </div>
       <div className="p-4">
-        <h2 className="text-xl font-bold mb-1">
-          {propertyLink ? (
-            <Link
-              href={propertyLink}
-              className="hover:underline hover:text-blue-600"
-              scroll={false}
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-xl font-bold">
+            {propertyLink ? (
+              <Link
+                href={propertyLink}
+                className="hover:underline hover:text-blue-600"
+                scroll={false}
+              >
+                {property.name}
+              </Link>
+            ) : (
+              property.name
+            )}
+          </h2>
+          {property.status && (
+            <span
+              className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                property.status
+              )}`}
             >
-              {property.name}
-            </Link>
-          ) : (
-            property.name
+              {property.status}
+            </span>
           )}
-        </h2>
+        </div>
         <p className="text-gray-600 mb-2">
           {property?.location?.address}, {property?.location?.city}
         </p>

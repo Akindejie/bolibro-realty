@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
-import SettingsForm from "@/components/SettingsForm";
+import SettingsForm from '@/components/SettingsForm';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   useGetAuthUserQuery,
   useUpdateManagerSettingsMutation,
-} from "@/state/api";
-import React from "react";
+} from '@/state/api';
+import React from 'react';
 
 const ManagerSettings = () => {
   const { data: authUser, isLoading } = useGetAuthUserQuery();
@@ -26,12 +27,20 @@ const ManagerSettings = () => {
     });
   };
 
+  const breadcrumbItems = [
+    { label: 'Dashboard', href: '/managers/properties' },
+    { label: 'Settings', href: '/managers/settings' },
+  ];
+
   return (
-    <SettingsForm
-      initialData={initialData}
-      onSubmit={handleSubmit}
-      userType="manager"
-    />
+    <div className="dashboard-container">
+      <Breadcrumbs items={breadcrumbItems} />
+      <SettingsForm
+        initialData={initialData}
+        onSubmit={handleSubmit}
+        userType="manager"
+      />
+    </div>
   );
 };
 

@@ -45,7 +45,11 @@ const Navbar = () => {
             </div>
           )}
           <Link
-            href="/"
+            href={
+              authUser?.userRole?.toLowerCase() === 'manager'
+                ? '/managers/properties'
+                : '/'
+            }
             className="cursor-pointer hover:!text-primary-300"
             scroll={false}
           >
