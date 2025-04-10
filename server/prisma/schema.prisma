@@ -6,7 +6,111 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [postgis]
+  extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
+}
+
+model Property {
+  id                Int            @id @default(autoincrement())
+  name              String
+  description       String
+  pricePerMonth     Float
+  securityDeposit   Float
+  applicationFee    Float
+  photoUrls         String[]
+  images            String[]       @default([])
+  amenities         Amenity[]
+  highlights        Highlight[]
+  isPetsAllowed     Boolean        @default(false)
+  isParkingIncluded Boolean        @default(false)
+  beds              Int
+  baths             Float
+  squareFeet        Int
+  propertyType      PropertyType
+  status            PropertyStatus @default(Available)
+  postedDate        DateTime       @default(now())
+  averageRating     Float?         @default(0)
+  numberOfReviews   Int?           @default(0)
+  locationId        Int
+  managerCognitoId  String
+  applications      Application[]
+  leases            Lease[]
+  location          Location       @relation(fields: [locationId], references: [id])
+  manager           Manager        @relation(fields: [managerCognitoId], references: [cognitoId])
+  favoritedBy       Tenant[]       @relation("TenantFavorites")
+  tenants           Tenant[]       @relation("TenantProperties")
+}
+
+model Manager {
+  id                Int        @id @default(autoincrement())
+  cognitoId         String     @unique
+  name              String
+  email             String
+  phoneNumber       String
+  managedProperties Property[]
+}
+
+model Tenant {
+  id           Int           @id @default(autoincrement())
+  cognitoId    String        @unique
+  name         String
+  email        String
+  phoneNumber  String
+  applications Application[]
+  leases       Lease[]
+  favorites    Property[]    @relation("TenantFavorites")
+  properties   Property[]    @relation("TenantProperties")
+}
+
+model Location {
+  id          Int                      @id @default(autoincrement())
+  address     String
+  city        String
+  state       String
+  country     String
+  postalCode  String
+  coordinates Unsupported("geography")
+  properties  Property[]
+}
+
+model Application {
+  id              Int               @id @default(autoincrement())
+  applicationDate DateTime
+  status          ApplicationStatus
+  propertyId      Int
+  tenantCognitoId String
+  name            String
+  email           String
+  phoneNumber     String
+  message         String?
+  leaseId         Int?              @unique
+  lease           Lease?            @relation(fields: [leaseId], references: [id])
+  property        Property          @relation(fields: [propertyId], references: [id])
+  tenant          Tenant            @relation(fields: [tenantCognitoId], references: [cognitoId])
+}
+
+model Lease {
+  id              Int          @id @default(autoincrement())
+  startDate       DateTime
+  endDate         DateTime
+  rent            Float
+  deposit         Float
+  propertyId      Int
+  tenantCognitoId String
+  application     Application?
+  property        Property     @relation(fields: [propertyId], references: [id])
+  tenant          Tenant       @relation(fields: [tenantCognitoId], references: [cognitoId])
+  payments        Payment[]
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  amountDue     Float
+  amountPaid    Float
+  dueDate       DateTime
+  paymentDate   DateTime
+  paymentStatus PaymentStatus
+  leaseId       Int
+  lease         Lease         @relation(fields: [leaseId], references: [id])
 }
 
 enum Highlight {
@@ -70,115 +174,4 @@ enum PaymentStatus {
   Paid
   PartiallyPaid
   Overdue
-}
-
-model Property {
-  id                Int            @id @default(autoincrement())
-  name              String
-  description       String
-  pricePerMonth     Float
-  securityDeposit   Float
-  applicationFee    Float
-  photoUrls         String[]
-  images            String[]       @default([])
-  amenities         Amenity[]
-  highlights        Highlight[]
-  isPetsAllowed     Boolean        @default(false)
-  isParkingIncluded Boolean        @default(false)
-  beds              Int
-  baths             Float
-  squareFeet        Int
-  propertyType      PropertyType
-  status            PropertyStatus @default(Available)
-  postedDate        DateTime       @default(now())
-  averageRating     Float?         @default(0)
-  numberOfReviews   Int?           @default(0)
-  locationId        Int
-  managerCognitoId  String
-
-  location     Location      @relation(fields: [locationId], references: [id])
-  manager      Manager       @relation(fields: [managerCognitoId], references: [cognitoId])
-  leases       Lease[]
-  applications Application[]
-  favoritedBy  Tenant[]      @relation("TenantFavorites")
-  tenants      Tenant[]      @relation("TenantProperties")
-}
-
-model Manager {
-  id          Int    @id @default(autoincrement())
-  cognitoId   String @unique
-  name        String
-  email       String
-  phoneNumber String
-
-  managedProperties Property[]
-}
-
-model Tenant {
-  id          Int    @id @default(autoincrement())
-  cognitoId   String @unique
-  name        String
-  email       String
-  phoneNumber String
-
-  properties   Property[]    @relation("TenantProperties")
-  favorites    Property[]    @relation("TenantFavorites")
-  applications Application[]
-  leases       Lease[]
-}
-
-model Location {
-  id          Int                                   @id @default(autoincrement())
-  address     String
-  city        String
-  state       String
-  country     String
-  postalCode  String
-  coordinates Unsupported("geography(Point, 4326)")
-
-  properties Property[]
-}
-
-model Application {
-  id              Int               @id @default(autoincrement())
-  applicationDate DateTime
-  status          ApplicationStatus
-  propertyId      Int
-  tenantCognitoId String
-  name            String
-  email           String
-  phoneNumber     String
-  message         String?
-  leaseId         Int?              @unique
-
-  property Property @relation(fields: [propertyId], references: [id])
-  tenant   Tenant   @relation(fields: [tenantCognitoId], references: [cognitoId])
-  lease    Lease?   @relation(fields: [leaseId], references: [id])
-}
-
-model Lease {
-  id              Int      @id @default(autoincrement())
-  startDate       DateTime
-  endDate         DateTime
-  rent            Float
-  deposit         Float
-  propertyId      Int
-  tenantCognitoId String
-
-  property    Property     @relation(fields: [propertyId], references: [id])
-  tenant      Tenant       @relation(fields: [tenantCognitoId], references: [cognitoId])
-  application Application?
-  payments    Payment[]
-}
-
-model Payment {
-  id            Int           @id @default(autoincrement())
-  amountDue     Float
-  amountPaid    Float
-  dueDate       DateTime
-  paymentDate   DateTime
-  paymentStatus PaymentStatus
-  leaseId       Int
-
-  lease Lease @relation(fields: [leaseId], references: [id])
 }

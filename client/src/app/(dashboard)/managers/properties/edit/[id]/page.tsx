@@ -31,8 +31,7 @@ interface EditPropertyPageProps {
 }
 
 const EditProperty = ({ params }: EditPropertyPageProps) => {
-  const unwrappedParams = React.use(params);
-  const propertyId = parseInt(unwrappedParams.id);
+  const propertyId = parseInt(params.id);
   const [updateProperty, { isLoading: isSubmitting, isSuccess }] =
     useUpdatePropertyMutation();
   const { data: authUser } = useGetAuthUserQuery();
@@ -129,17 +128,15 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
 
     setIsSearching(true);
     try {
-      const response = await axios.get(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          query
-        )}&format=json&addressdetails=1&limit=5`,
-        {
-          headers: {
-            'User-Agent': 'Bolibro-Rentals (bolibro623@gmail.com)',
-          },
-        }
-      );
-      setAddressSuggestions(response.data);
+      const geocodingUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        query
+      )}&format=json&addressdetails=1&limit=5`;
+      const geocodingResponse = await axios.get(geocodingUrl, {
+        headers: {
+          'User-Agent': 'Bolibro-Realty (bolibro623@gmail.com)',
+        },
+      });
+      setAddressSuggestions(geocodingResponse.data);
       setShowSuggestions(true);
     } catch (error) {
       console.error('Error searching address:', error);
@@ -236,7 +233,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
 
       // Log FormData entries for debugging
       console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
+      for (const [key, value] of formData.entries()) {
         console.log(
           `${key}: ${
             typeof value === 'string' ? value : `[${value.constructor.name}]`
@@ -285,17 +282,18 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
     }
   };
 
-  const handleFileUpload = async (files: FileList) => {
+  const handleFileUpload = async (files: FileList | null): Promise<void> => {
+    if (!files || files.length === 0) return;
+
     try {
-      const response = await uploadPropertyImages({
+      await uploadPropertyImages({
         propertyId: String(propertyId),
         images: Array.from(files),
       }).unwrap();
 
-      return response.imageUrls || [];
+      // The component will be updated through the API response and re-render
     } catch (error) {
       console.error('Failed to upload images:', error);
-      throw error;
     }
   };
 
@@ -451,7 +449,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
               <PropertyImageGallery
                 images={property?.images || []}
                 onImagesChange={handleImagesChange}
-                onFileUpload={handleFileUpload}
+                onImageUpload={handleFileUpload}
               />
             </div>
 

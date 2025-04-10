@@ -1,6 +1,7 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-import { wktToGeoJSON } from "@terraformer/wkt";
+import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+// @ts-ignore
+const { wktToGeoJSON } = require('@terraformer/wkt');
 
 const prisma = new PrismaClient();
 
@@ -17,7 +18,7 @@ export const getManager = async (
     if (manager) {
       res.json(manager);
     } else {
-      res.status(404).json({ message: "Manager not found" });
+      res.status(404).json({ message: 'Manager not found' });
     }
   } catch (error: any) {
     res
@@ -93,7 +94,7 @@ export const getManagerProperties = async (
         const coordinates: { coordinates: string }[] =
           await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
 
-        const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || "");
+        const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
         const longitude = geoJSON.coordinates[0];
         const latitude = geoJSON.coordinates[1];
 

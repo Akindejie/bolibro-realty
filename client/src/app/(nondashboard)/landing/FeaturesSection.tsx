@@ -46,15 +46,15 @@ const FeaturesSection = () => {
                 title={
                   [
                     'Trustworthy and Verified Listings',
-                    'Browse Rental Listings with Ease',
-                    'Simplify Your Rental Search with Advanced',
+                    'Browse Realty Listings with Ease',
+                    'Simplify Your Realty Search with Advanced',
                   ][index]
                 }
                 description={
                   [
-                    'Discover the best rental options with user reviews and ratings.',
-                    'Get access to user reviews and ratings for a better understanding of rental options.',
-                    'Find trustworthy and verified rental listings to ensure a hassle-free experience.',
+                    'Discover the best realty options with user reviews and ratings.',
+                    'Get access to user reviews and ratings for a better understanding of realty options.',
+                    'Find trustworthy and verified realty listings to ensure a hassle-free experience.',
                   ][index]
                 }
                 linkText={['Explore', 'Search', 'Discover'][index]}
@@ -102,6 +102,5 @@ const FeatureCard = ({
     </Link>
   </div>
 );
-
 
 export default FeaturesSection;

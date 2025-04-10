@@ -14,10 +14,10 @@ const FooterSection = () => {
     <footer className="border-t border-gray-200 py-20">
       <div className="max-w-4xl mx-auto px-6 sm:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4">
-            <Link href="/" className="text-xl font-bold" scroll={false}>
-              BOLIBRO RENTALS
-            </Link>
+          <div className="mb-4 md:mb-0">
+            <div className="text-lg font-semibold mb-2 text-gray-800">
+              BOLIBRO REALTY
+            </div>
           </div>
           <nav className="mb-4">
             <ul className="flex space-x-6">

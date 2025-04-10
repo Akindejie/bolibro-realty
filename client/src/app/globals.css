@@ -1,10 +1,6 @@
 @import 'tailwindcss';
 @config "../../tailwind.config.ts";
 
-/* @tailwind base;
-@tailwind components;
-@tailwind utilities; */
-
 *,
 *::before,
 *::after {

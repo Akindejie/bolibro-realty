@@ -67,7 +67,7 @@ const NewProperty = () => {
         )}&format=json&addressdetails=1&limit=5`,
         {
           headers: {
-            'User-Agent': 'Bolibro-Rentals (bolibro623@gmail.com)',
+            'User-Agent': 'Bolibro-Realty (bolibro623@gmail.com)',
           },
         }
       );

@@ -56,6 +56,7 @@ const Card = ({
             src={imgSrc}
             alt={property.name}
             fill
+            priority
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             onError={() => setImgSrc('/placeholder.jpg')}

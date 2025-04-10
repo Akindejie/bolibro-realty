@@ -1,11 +1,11 @@
 module.exports = {
   apps: [
     {
-      name: "bolibro-rentals",
-      script: "npm",
-      args: "run dev",
+      name: 'bolibro-realty',
+      script: 'npm',
+      args: 'run dev',
       env: {
-        NODE_ENV: "development",
+        NODE_ENV: 'development',
       },
     },
   ],

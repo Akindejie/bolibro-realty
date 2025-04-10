@@ -64,7 +64,7 @@ const Navbar = () => {
               <div className="text-xl font-bold">
                 BOLIBRO
                 <span className="text-secondary-500 font-light hover:!text-primary-300">
-                  HOMES
+                  REALTY
                 </span>
               </div>
             </div>
@@ -99,7 +99,7 @@ const Navbar = () => {
         </div>
         {!isDashboardPage && (
           <p className="text-primary-200 hidden md:block">
-            Discover your perfect rental apartment with our advanced search
+            Discover your perfect realty property with our advanced search
           </p>
         )}
         <div className="flex items-center gap-5">

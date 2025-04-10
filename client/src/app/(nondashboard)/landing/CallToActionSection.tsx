@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import React from "react";
-import { motion } from "framer-motion";
-import Link from "next/link";
+import Image from 'next/image';
+import React from 'react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 const CallToActionSection = () => {
   return (
     <div className="relative py-24">
       <Image
         src="/landing-call-to-action.jpg"
-        alt="Bolibro Search Section Background"
+        alt="Bolibro Realty Search Section Background"
         fill
         className="object-cover object-center"
       />
@@ -24,18 +24,19 @@ const CallToActionSection = () => {
       >
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-6 md:mb-0 md:mr-10">
-            <h2 className="text-2xl font-bold text-white">
-              Find Your Dream Rental Property
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-center">
+              Find Your Dream Realty Property
             </h2>
           </div>
           <div>
-            <p className="text-white mb-3">
-              Discover a wide range of rental properties in your desired
-              location.
+            <p className="text-lg text-center max-w-2xl mx-auto mb-8">
+              Discover a wide range of realty properties in your desired
+              location. Let us help you find the perfect property for your
+              needs.
             </p>
             <div className="flex justify-center md:justify-start gap-4">
               <button
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className="inline-block text-primary-700 bg-white rounded-lg px-6 py-3 font-semibold hover:bg-primary-500 hover:text-primary-50"
               >
                 Search

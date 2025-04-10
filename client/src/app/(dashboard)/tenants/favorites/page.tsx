@@ -57,7 +57,7 @@ const Favorites = () => {
         ))}
       </div>
       {(!favoriteProperties || favoriteProperties.length === 0) && (
-        <p>You don&lsquo;t have any favorited properties</p>
+        <p>You don&apos;t have any favorited properties</p>
       )}
     </div>
   );

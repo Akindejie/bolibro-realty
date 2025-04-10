@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bed,
   Bath,
@@ -35,75 +35,137 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 }) => {
   const [uploadPropertyImages] = useUploadPropertyImagesMutation();
   const [updatePropertyImages] = useUpdatePropertyImagesMutation();
+  const [localImages, setLocalImages] = React.useState<string[]>([]);
   const router = useRouter();
 
-  // Add debugging to see what's in the property
-  React.useEffect(() => {
-    console.log('PropertyDetails - Property:', property);
-    console.log('PropertyDetails - Images:', property.images);
-    console.log('PropertyDetails - PhotoUrls:', property.photoUrls);
-  }, [property]);
+  // Initialize localImages from property data
+  useEffect(() => {
+    if (property) {
+      console.log('Property data received:', property);
 
-  // Determine which image array to use - prefer images, fall back to photoUrls
-  const propertyImages = property.images?.length
-    ? property.images
-    : property.photoUrls || [];
+      // First check if we have stored images in localStorage
+      const storedImagesKey = `property_${property.id}_images`;
+      const storedImages = localStorage.getItem(storedImagesKey);
 
-  const handleFileUpload = async (files: FileList) => {
+      if (storedImages) {
+        try {
+          const parsedImages = JSON.parse(storedImages);
+          setLocalImages(parsedImages);
+          console.log('Loaded images from local storage:', parsedImages);
+
+          // Attempt to sync with server if we're online
+          if (navigator.onLine) {
+            updatePropertyImages({
+              propertyId: String(property.id),
+              images: parsedImages,
+            })
+              .unwrap()
+              .then(() => {
+                console.log('Successfully synced stored images with server');
+                localStorage.removeItem(storedImagesKey);
+              })
+              .catch((err) => {
+                console.error('Failed to sync stored images:', err);
+              });
+          }
+        } catch (e) {
+          console.error('Failed to parse stored images:', e);
+          localStorage.removeItem(storedImagesKey);
+        }
+      }
+
+      // Use property images
+      // Check in order: photoUrls, images, photos to handle different API responses
+      const propertyImages = property.photoUrls || property.images || [];
+      console.log('Setting local images to:', propertyImages);
+      setLocalImages(propertyImages);
+    }
+  }, [property, updatePropertyImages]);
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || !property) return;
+
     try {
-      const response = await uploadPropertyImages({
+      console.log(
+        `Uploading ${files.length} files for property ${property.id}...`
+      );
+
+      // Use RTK mutation for upload
+      const result = await uploadPropertyImages({
         propertyId: String(property.id),
         images: Array.from(files),
       }).unwrap();
 
-      return response.imageUrls || [];
-    } catch (error) {
-      console.error('Failed to upload images:', error);
-      throw error;
-    }
-  };
+      console.log('Upload response:', result);
 
-  const handleImagesChange = async (images: string[]): Promise<boolean> => {
-    console.log('Updating images to:', images);
+      if (result.imageUrls && Array.isArray(result.imageUrls)) {
+        // Update local state immediately
+        const updatedImages = [...localImages, ...result.imageUrls];
+        console.log('Updating local images to:', updatedImages);
+        setLocalImages(updatedImages);
 
-    // Create a local optimistic update function that doesn't depend on the server
-    const optimisticUpdate = (newImages: string[]): boolean => {
-      try {
-        // Store updated images in localStorage as a fallback
+        // Store in localStorage as backup
         localStorage.setItem(
           `property_${property.id}_images`,
-          JSON.stringify(newImages)
+          JSON.stringify(updatedImages)
         );
 
-        // Attempt server update in the background
+        // Try to update server
         updatePropertyImages({
           propertyId: String(property.id),
-          images,
+          images: updatedImages,
         })
           .unwrap()
           .then(() => {
-            console.log('Server images updated successfully');
+            console.log('Successfully updated images on server');
+            localStorage.removeItem(`property_${property.id}_images`);
           })
-          .catch((error) => {
-            console.error(
-              'Server update failed, but local changes preserved:',
-              error
-            );
-            toast.error(
-              'Changes saved locally. Server update will retry automatically.'
-            );
+          .catch((err) => {
+            console.error('Failed to update images on server:', err);
+            // Keep the localStorage backup for later sync
           });
-
-        // Return success immediately for UI purposes
-        return true;
-      } catch (error) {
-        console.error('Error in optimistic update:', error);
-        return false;
       }
-    };
 
-    // Immediately return success for UI responsiveness
-    return optimisticUpdate(images);
+      toast.success('Images uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      toast.error('Failed to upload images. Please try again.');
+    }
+  };
+
+  const handleImagesChange = (newImages: string[]) => {
+    if (!property) return;
+
+    console.log('Images changed to:', newImages);
+
+    // Update local state immediately for responsive UI
+    setLocalImages(newImages);
+
+    // Save to localStorage as backup
+    localStorage.setItem(
+      `property_${property.id}_images`,
+      JSON.stringify(newImages)
+    );
+
+    // Try to update server
+    updatePropertyImages({
+      propertyId: String(property.id),
+      images: newImages,
+    })
+      .unwrap()
+      .then(() => {
+        console.log('Successfully updated images on server');
+        localStorage.removeItem(`property_${property.id}_images`);
+      })
+      .catch((err) => {
+        console.error('Failed to update images on server:', err);
+        // We already saved to localStorage above, so the changes won't be lost
+        if (navigator.onLine) {
+          toast.error(
+            'Failed to update images on server. Changes saved locally and will sync automatically when possible.'
+          );
+        }
+      });
   };
 
   const getStatusColor = (status: PropertyStatus) => {
@@ -141,9 +203,9 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
             )}
           </div>
           <PropertyImageGallery
-            images={propertyImages}
-            onImagesChange={isEditable ? handleImagesChange : () => {}}
-            onFileUpload={handleFileUpload}
+            images={localImages}
+            onImagesChange={isEditable ? handleImagesChange : undefined}
+            onImageUpload={isEditable ? handleFileUpload : undefined}
           />
         </div>
 

@@ -468,16 +468,18 @@ export const api = createApi({
         toast.loading('Uploading images...', { id: toastId });
 
         try {
-          await queryFulfilled;
+          const result = await queryFulfilled;
+          console.log('Image upload success:', result.data);
           toast.success('Images uploaded successfully', { id: toastId });
         } catch (error) {
+          console.error('Image upload error:', error);
           toast.error('Failed to upload images', { id: toastId });
         }
       },
     }),
 
     updatePropertyImages: build.mutation<
-      { success: boolean; data: any },
+      { success: boolean; message: string },
       { propertyId: string; images: string[] }
     >({
       query: ({ propertyId, images }) => ({
@@ -490,52 +492,37 @@ export const api = createApi({
         { type: 'PropertyDetails', id: Number(propertyId) },
         { type: 'Properties', id: 'LIST' },
       ],
-      async onQueryStarted({ propertyId }, { dispatch, queryFulfilled }) {
-        const toastId = `update-images-${propertyId}-${Date.now()}`;
-
-        // Get stored property images if they exist
-        const savedImagesStr = localStorage.getItem(
-          `property_${propertyId}_images`
-        );
+      onQueryStarted: async ({ propertyId, images }, { queryFulfilled }) => {
+        const toastId = toast.loading('Updating images...');
 
         try {
-          toast.loading('Updating images...', { id: toastId });
-
-          // If we're offline, don't even try to make the request
+          // Check if we're offline
           if (!navigator.onLine) {
-            throw new Error(
-              'You are offline. Changes will sync when you reconnect.'
-            );
-          }
-
-          await queryFulfilled;
-          toast.success('Images updated successfully', { id: toastId });
-
-          // Clear saved images since server update succeeded
-          if (savedImagesStr) {
-            localStorage.removeItem(`property_${propertyId}_images`);
-          }
-        } catch (error) {
-          console.error('Error updating images:', error);
-
-          if (!navigator.onLine) {
-            toast.error(
-              'You are offline. Changes saved locally and will sync when online.',
-              { id: toastId }
-            );
-          } else {
-            toast.error('Failed to update images. Changes saved locally.', {
-              id: toastId,
-            });
-          }
-
-          // Store images locally to retry later
-          if (images && images.length > 0) {
+            // Save the images to localStorage as backup
             localStorage.setItem(
               `property_${propertyId}_images`,
               JSON.stringify(images)
             );
+            toast.error('You are offline. Changes saved locally.', {
+              id: toastId,
+            });
+            throw new Error('You are offline');
           }
+
+          // If online, proceed with the request
+          const result = await queryFulfilled;
+          console.log('Image update success:', result.data);
+          toast.success('Images updated successfully', { id: toastId });
+        } catch (err) {
+          if (!navigator.onLine) {
+            // Already handled above
+            return;
+          }
+
+          console.error('Failed to update images:', err);
+          toast.error('Failed to update images. Please try again.', {
+            id: toastId,
+          });
         }
       },
     }),

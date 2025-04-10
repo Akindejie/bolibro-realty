@@ -10,7 +10,7 @@ import {
   updateProperty,
   updatePropertyStatus,
   updateBulkPropertyStatus,
-  uploadPropertyImages,
+  uploadPropertyImage,
   updatePropertyImages,
 } from '../controllers/propertyControllers';
 
@@ -49,7 +49,7 @@ router.post(
   '/:id/images',
   authMiddleware(['manager']),
   handleUpload.array('images'),
-  uploadPropertyImages
+  uploadPropertyImage
 );
 router.put('/:id/images', authMiddleware(['manager']), updatePropertyImages);
 

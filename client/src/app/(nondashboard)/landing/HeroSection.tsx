@@ -26,7 +26,7 @@ const HeroSection = () => {
           process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
         }&fuzzyMatch=true`
       );
-      
+
       const data = await response.json();
       if (data.features && data.features.length > 0) {
         const [lng, lat] = data.features[0].center;
@@ -51,8 +51,8 @@ const HeroSection = () => {
   return (
     <div className="relative h-screen">
       <Image
-        src="/landing-splash.jpg"
-        alt="Bolibro Rental Platform Hero Section"
+        src="/images/hero.webp"
+        alt="Bolibro Realty Platform Hero Section"
         fill
         className="object-cover object-center"
         priority
@@ -69,7 +69,7 @@ const HeroSection = () => {
             Start your journey to finding the perfect place to call home
           </h1>
           <p className="text-xl text-white mb-8">
-            Explore our wide range of rental properties tailored to fit your
+            Explore our wide range of realty properties tailored to fit your
             lifestyle and needs!
           </p>
           <div className="flex justify-center">
