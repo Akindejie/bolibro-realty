@@ -17,6 +17,15 @@ interface LeaseDocumentUploadProps {
   onSuccess?: () => void;
 }
 
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+const ALLOWED_FILE_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+];
+
 export function LeaseDocumentUpload({
   leaseId,
   onSuccess,
@@ -24,12 +33,41 @@ export function LeaseDocumentUpload({
   const [file, setFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>('lease-agreement');
   const [isUploading, setIsUploading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const [uploadLeaseDocument] = useUploadLeaseDocumentMutation();
 
+  const validateFile = (file: File): boolean => {
+    setFileError(null);
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError(
+        `File size exceeds 15MB limit (${(file.size / (1024 * 1024)).toFixed(
+          2
+        )}MB)`
+      );
+      return false;
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      setFileError(
+        `File type "${file.type}" is not supported. Please use PDF, DOC, DOCX, JPG, or PNG.`
+      );
+      return false;
+    }
+
+    return true;
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (validateFile(selectedFile)) {
+        setFile(selectedFile);
+      } else {
+        e.target.value = ''; // Reset file input
+        setFile(null);
+      }
     }
   };
 
@@ -58,12 +96,16 @@ export function LeaseDocumentUpload({
       toast.success('Document uploaded successfully');
       setFile(null);
 
+      // Reset file input
+      const fileInput = document.getElementById('document') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
       console.error('Error uploading document:', error);
-      toast.error('Failed to upload document. Please try again.');
+      // Error is handled by the API's onQueryStarted error handler
     } finally {
       setIsUploading(false);
     }
@@ -94,13 +136,22 @@ export function LeaseDocumentUpload({
           type="file"
           onChange={handleFileChange}
           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          className={fileError ? 'border-red-500' : ''}
         />
-        <p className="text-xs text-gray-500">
-          Accepted formats: PDF, DOC, DOCX, JPG, PNG (max 15MB)
-        </p>
+        {fileError ? (
+          <p className="text-xs text-red-500">{fileError}</p>
+        ) : (
+          <p className="text-xs text-gray-500">
+            Accepted formats: PDF, DOC, DOCX, JPG, PNG (max 15MB)
+          </p>
+        )}
       </div>
 
-      <Button type="submit" disabled={!file || isUploading} className="w-full">
+      <Button
+        type="submit"
+        disabled={!file || isUploading || !!fileError}
+        className="w-full"
+      >
         {isUploading ? 'Uploading...' : 'Upload Document'}
       </Button>
     </form>

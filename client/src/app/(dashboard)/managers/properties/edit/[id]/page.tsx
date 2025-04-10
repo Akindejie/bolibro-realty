@@ -1,5 +1,8 @@
 'use client';
 
+// This is manager property edit page
+// where you can edit the property details
+
 import { CustomFormField } from '@/components/FormField';
 import Header from '@/components/Header';
 import Loading from '@/components/Loading';

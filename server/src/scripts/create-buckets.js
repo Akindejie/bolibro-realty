@@ -1,8 +1,12 @@
-// Script to create required Supabase buckets
+// Import the Supabase client and config directly
 const { createClient } = require('@supabase/supabase-js');
-
-// Load environment variables
 require('dotenv').config();
+
+// Supabase bucket names - copied from config to avoid import issues
+const SUPABASE_BUCKETS = {
+  PROPERTY_IMAGES: 'property-images',
+  DOCUMENTS: 'lease-agreements-and-documents',
+};
 
 // Create Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -15,82 +19,87 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Define required buckets
-const REQUIRED_BUCKETS = [
+// Define the required buckets with their options
+const requiredBuckets = [
   {
-    name: 'property-images',
+    name: SUPABASE_BUCKETS.PROPERTY_IMAGES,
     options: {
       public: true,
-      allowedMimeTypes: ['image/*'],
-      fileSizeLimit: 10485760, // 10MB
+      fileSizeLimit: 10 * 1024 * 1024, // 10MB
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
     },
   },
   {
-    name: 'lease-agreements-and-documents',
+    name: SUPABASE_BUCKETS.DOCUMENTS,
     options: {
-      public: false,
+      public: true, // Changed to public for easier access
+      fileSizeLimit: 15 * 1024 * 1024, // 15MB
       allowedMimeTypes: [
         'application/pdf',
-        'image/*',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png',
       ],
-      fileSizeLimit: 15728640, // 15MB
     },
   },
 ];
 
 async function ensureBucketsExist() {
-  console.log('Checking Supabase buckets...');
-
   try {
-    // List existing buckets
-    const { data: buckets, error: bucketError } =
-      await supabase.storage.listBuckets();
-
-    if (bucketError) {
-      console.error('Error listing buckets:', bucketError);
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      console.error(
+        'Missing Supabase credentials. Make sure environment variables are set.'
+      );
       return;
     }
 
-    console.log('Existing buckets:', buckets.map((b) => b.name).join(', '));
+    console.log('Checking Supabase buckets...');
+    const { data: buckets, error } = await supabase.storage.listBuckets();
 
-    // Check and create each required bucket
-    for (const requiredBucket of REQUIRED_BUCKETS) {
-      const exists = buckets.some((b) => b.name === requiredBucket.name);
+    if (error) {
+      console.error('Error listing buckets:', error.message);
+      return;
+    }
 
-      if (exists) {
-        console.log(`Bucket "${requiredBucket.name}" already exists`);
-      } else {
-        console.log(`Creating bucket "${requiredBucket.name}"...`);
+    console.log(
+      'Existing buckets:',
+      buckets.map((b) => `"${b.name}"`).join(', ')
+    );
 
+    // Ensure each required bucket exists
+    for (const bucket of requiredBuckets) {
+      const bucketExists = buckets.some((b) => b.name === bucket.name);
+
+      if (!bucketExists) {
+        console.log(`Creating bucket "${bucket.name}"...`);
         try {
-          const { data, error } = await supabase.storage.createBucket(
-            requiredBucket.name,
-            requiredBucket.options
+          const { error: createError } = await supabase.storage.createBucket(
+            bucket.name,
+            bucket.options
           );
 
-          if (error) {
+          if (createError) {
             console.error(
-              `Error creating bucket "${requiredBucket.name}":`,
-              error
+              `Failed to create bucket "${bucket.name}":`,
+              createError.message
             );
           } else {
-            console.log(`Successfully created bucket "${requiredBucket.name}"`);
+            console.log(`Successfully created bucket "${bucket.name}"`);
           }
-        } catch (createError) {
-          console.error(
-            `Error creating bucket "${requiredBucket.name}":`,
-            createError
-          );
+        } catch (err) {
+          console.error(`Error creating bucket "${bucket.name}":`, err);
         }
+      } else {
+        console.log(`Bucket "${bucket.name}" already exists`);
       }
     }
 
     console.log('Bucket setup complete');
-  } catch (error) {
-    console.error('Error setting up buckets:', error);
+  } catch (err) {
+    console.error('Error in bucket setup:', err);
   }
 }
 
+// Run the setup
 ensureBucketsExist();

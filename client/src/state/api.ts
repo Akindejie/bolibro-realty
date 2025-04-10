@@ -11,6 +11,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { FiltersState } from '.';
 import { toast } from 'react-hot-toast';
+import { userLogout } from './authSlice';
 
 export const api = createApi({
   baseQuery: fetchBaseQuery({
@@ -543,7 +544,7 @@ export const api = createApi({
 
     // Upload a document for a lease
     uploadLeaseDocument: build.mutation<
-      { message: string; document: any },
+      { message: string; documentUrl: string },
       { leaseId: number; documentType: string; file: File }
     >({
       query: ({ leaseId, documentType, file }) => {
@@ -562,6 +563,27 @@ export const api = createApi({
       invalidatesTags: (result, error, { leaseId }) => [
         { type: 'Leases', id: leaseId.toString() },
       ],
+      async onQueryStarted(_, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch (err: any) {
+          let errorMessage = 'Failed to upload document';
+
+          // Extract more specific error from the response
+          if (err?.error?.data?.message) {
+            errorMessage = err.error.data.message;
+          } else if (err?.error?.status === 404) {
+            errorMessage =
+              'Document storage bucket not found. Please contact support.';
+          } else if (err?.error?.status >= 500) {
+            errorMessage =
+              'Server error uploading document. Please try again later.';
+          }
+
+          console.error('Error uploading document:', err, errorMessage);
+          toast.error(errorMessage);
+        }
+      },
     }),
   }),
 });

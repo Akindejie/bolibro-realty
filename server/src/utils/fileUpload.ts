@@ -110,25 +110,51 @@ export const uploadLeaseDocument = async (
     const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
     const filePath = `${folder}/${fileName}`;
 
-    // Upload to Supabase documents bucket
-    const { data, error } = await supabase.storage
-      .from(SUPABASE_BUCKETS.DOCUMENTS)
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
+    // Define fallback bucket names to try
+    const bucketNamesToTry = [
+      SUPABASE_BUCKETS.DOCUMENTS,
+      'lease-agreements-and-documents',
+      'Lease Agreements and Documents',
+    ];
 
-    if (error) {
-      console.error('Lease document upload error:', error);
+    // Try uploading to each bucket until successful
+    let documentUrl = null;
+
+    for (const bucketName of bucketNamesToTry) {
+      try {
+        console.log(`Attempting upload to bucket: "${bucketName}"`);
+
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (error) {
+          console.log(`Upload to "${bucketName}" failed:`, error.message);
+          continue;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+
+        documentUrl = urlData.publicUrl;
+        console.log(`Successfully uploaded to bucket "${bucketName}"`);
+        break;
+      } catch (err) {
+        console.error(`Error trying bucket "${bucketName}":`, err);
+      }
+    }
+
+    if (!documentUrl) {
+      console.error('Failed to upload document to any bucket');
       return null;
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(SUPABASE_BUCKETS.DOCUMENTS)
-      .getPublicUrl(filePath);
-
-    return urlData.publicUrl;
+    return documentUrl;
   } catch (error) {
     console.error('Lease document upload error:', error);
     return null;

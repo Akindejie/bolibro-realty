@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import React from 'react';
+import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faFacebook,
@@ -15,9 +16,14 @@ const FooterSection = () => {
       <div className="max-w-4xl mx-auto px-6 sm:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
-            <div className="text-lg font-semibold mb-2 text-gray-800">
-              BOLIBRO REALTY
-            </div>
+            <Image
+              src="/bolibro-logo-black.png"
+              alt="Bolibro Realty Logo"
+              width={150}
+              height={150}
+              className="h-auto"
+              priority
+            />
           </div>
           <nav className="mb-4">
             <ul className="flex space-x-6">

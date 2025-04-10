@@ -1,5 +1,8 @@
 'use client';
 
+// This is manager property page
+// It shows all the properties that the manager has created
+
 import Card from '@/components/Card';
 import Header from '@/components/Header';
 import Loading from '@/components/Loading';
@@ -122,10 +125,10 @@ const Properties = () => {
     <div className="dashboard-container">
       <Breadcrumbs items={breadcrumbItems} />
       <div className="flex justify-between items-center">
-      <Header
-        title="My Properties"
-        subtitle="View and manage your property listings"
-      />
+        <Header
+          title="My Properties"
+          subtitle="View and manage your property listings"
+        />
         <div className="flex items-center gap-2">
           <div
             onClick={handleSelectAll}
@@ -154,17 +157,17 @@ const Properties = () => {
                 className="bg-white/80 border-gray-400"
               />
             </div>
-          <Card
-            key={property.id}
-            property={property}
-            isFavorite={false}
-            onFavoriteToggle={() => {}}
-            showFavoriteButton={false}
-            propertyLink={`/managers/properties/${property.id}`}
-            isManager={true}
-            onDelete={handleDeleteProperty}
+            <Card
+              key={property.id}
+              property={property}
+              isFavorite={false}
+              onFavoriteToggle={() => {}}
+              showFavoriteButton={false}
+              propertyLink={`/managers/properties/${property.id}`}
+              isManager={true}
+              onDelete={handleDeleteProperty}
               onEdit={handleEditProperty}
-          />
+            />
           </div>
         ))}
       </div>

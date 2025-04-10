@@ -24,34 +24,45 @@ const HeroSection = () => {
           trimmedQuery
         )}.json?access_token=${
           process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
-        }&fuzzyMatch=true`
+        }&fuzzyMatch=true&limit=1`
       );
 
       const data = await response.json();
       if (data.features && data.features.length > 0) {
         const [lng, lat] = data.features[0].center;
+        const placeName = data.features[0].place_name;
+
         dispatch(
           setFilters({
             location: trimmedQuery,
-            coordinates: [lat, lng],
+            coordinates: [lng, lat],
           })
         );
+
         const params = new URLSearchParams({
           location: trimmedQuery,
-          lat: lat.toString(),
-          lng: lng,
+          coordinates: `${lng},${lat}`,
         });
+
         router.push(`/search?${params.toString()}`);
+      } else {
+        console.error('No location found');
       }
     } catch (error) {
-      console.error('error search location:', error);
+      console.error('Error searching location:', error);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLocationSearch();
     }
   };
 
   return (
     <div className="relative h-screen">
       <Image
-        src="/images/hero.webp"
+        src="/landing-splash.jpg"
         alt="Bolibro Realty Platform Hero Section"
         fill
         className="object-cover object-center"
@@ -62,7 +73,7 @@ const HeroSection = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-full"
+        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-full z-20"
       >
         <div className="max-w-4xl mx-auto px-16 sm:px-12">
           <h1 className="text-5xl font-bold text-white mb-4">
@@ -72,17 +83,20 @@ const HeroSection = () => {
             Explore our wide range of realty properties tailored to fit your
             lifestyle and needs!
           </p>
-          <div className="flex justify-center">
+          <div className="flex justify-center relative z-30">
             <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Search by city, neighborhood or address"
-              className="w-full max-w-lg rounded-none rounded-l-xl border-none bg-white h-12"
+              className="w-full max-w-lg rounded-none rounded-l-xl border-none bg-white h-12 z-20 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus-visible:ring-2"
+              style={{ pointerEvents: 'auto' }}
             />
             <Button
               onClick={handleLocationSearch}
-              className="bg-secondary-500 text-white rounded-none rounded-r-xl border-none hover:bg-secondary-600 h-12"
+              className="bg-secondary-500 text-white rounded-none rounded-r-xl border-none hover:bg-secondary-600 h-12 z-20"
+              style={{ pointerEvents: 'auto' }}
             >
               Search
             </Button>

@@ -1,4 +1,6 @@
 'use client';
+// This is manager property details page
+// where you can add images to the property or go to the edit page
 
 import Header from '@/components/Header';
 import Loading from '@/components/Loading';

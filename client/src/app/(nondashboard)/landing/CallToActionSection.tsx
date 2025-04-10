@@ -1,55 +1,68 @@
 'use client';
 
 import Image from 'next/image';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 const CallToActionSection = () => {
+  const router = useRouter();
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    setIsAuthenticated(authStatus === 'authenticated');
+  }, [authStatus]);
+
+  const handleSearch = () => {
+    router.push('/search');
+  };
+
   return (
-    <div className="relative py-24">
-      <Image
-        src="/landing-call-to-action.jpg"
-        alt="Bolibro Realty Search Section Background"
-        fill
-        className="object-cover object-center"
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+    <div className="relative py-24 h-[500px]">
+      <div className="absolute inset-0 overflow-hidden">
+        <Image
+          src="/landing-call-to-action.jpg"
+          alt="Bolibro Realty Search Section Background"
+          fill
+          className="object-cover object-center z-0"
+        />
+      </div>
+      <div className="absolute inset-0 bg-black opacity-30 z-10"></div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         transition={{ duration: 0.5 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="relative max-w-4xl xl:max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 py-12"
+        className="relative z-20 flex flex-col items-center justify-center h-full max-w-4xl xl:max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16"
       >
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-6 md:mb-0 md:mr-10">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-center">
-              Find Your Dream Realty Property
-            </h2>
-          </div>
-          <div>
-            <p className="text-lg text-center max-w-2xl mx-auto mb-8">
-              Discover a wide range of realty properties in your desired
-              location. Let us help you find the perfect property for your
-              needs.
-            </p>
-            <div className="flex justify-center md:justify-start gap-4">
-              <button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="inline-block text-primary-700 bg-white rounded-lg px-6 py-3 font-semibold hover:bg-primary-500 hover:text-primary-50"
-              >
-                Search
-              </button>
-              <Link
-                href="/signup"
-                className="inline-block text-white bg-secondary-500 rounded-lg px-6 py-3 font-semibold hover:bg-secondary-600"
-                scroll={false}
-              >
-                Sign Up
-              </Link>
-            </div>
-          </div>
+        <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-center text-white leading-tight">
+          Find Your Dream Realty Property
+        </h2>
+
+        <p className="text-lg md:text-xl text-center max-w-2xl mx-auto mb-10 text-white">
+          Discover a wide range of realty properties in your desired location.
+          Let us help you find the perfect property for your needs.
+        </p>
+
+        <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
+          <button
+            onClick={handleSearch}
+            className="inline-block text-primary-700 bg-white rounded-lg px-8 py-4 font-semibold hover:bg-primary-500 hover:text-primary-50 transition-colors duration-300 shadow-lg"
+          >
+            Search Properties
+          </button>
+          {!isAuthenticated && (
+            <Link
+              href="/signup"
+              className="inline-block text-white bg-secondary-500 rounded-lg px-8 py-4 font-semibold hover:bg-secondary-600 transition-colors duration-300 shadow-lg"
+              scroll={false}
+            >
+              Sign Up
+            </Link>
+          )}
         </div>
       </motion.div>
     </div>

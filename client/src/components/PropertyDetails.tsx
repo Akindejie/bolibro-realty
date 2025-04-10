@@ -143,17 +143,17 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       toast.success('Images uploaded successfully');
     } catch (error: any) {
       console.error('Error uploading images:', error);
-
+      
       // Check if it's a specific error with a message from the server
       let errorMessage = 'Failed to upload images. Please try again.';
-
+      
       if (error?.data?.message) {
         errorMessage = `Server error: ${error.data.message}`;
         console.error('Server error details:', error.data);
       } else if (error?.message) {
         errorMessage = `Error: ${error.message}`;
       }
-
+      
       toast.error(errorMessage);
     }
   };

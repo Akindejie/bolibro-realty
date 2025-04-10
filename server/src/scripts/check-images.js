@@ -47,3 +47,4 @@ async function checkPropertyImages() {
 }
 
 checkPropertyImages();
+
