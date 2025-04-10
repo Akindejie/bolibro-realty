@@ -35,6 +35,15 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
   // Update displayed images when prop changes
   useEffect(() => {
     console.log('PropertyImageGallery - Images received:', images);
+    console.log(
+      'PropertyImageGallery - Images is array:',
+      Array.isArray(images)
+    );
+    console.log('PropertyImageGallery - Images length:', images.length);
+    if (images.length > 0) {
+      console.log('PropertyImageGallery - First image URL:', images[0]);
+      console.log('PropertyImageGallery - All images:', JSON.stringify(images));
+    }
     setDisplayedImages(images);
   }, [images]);
 
@@ -173,65 +182,71 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {displayedImages.map((src, index) => (
-          <div
-            key={`image-${index}-${
-              typeof src === 'string' ? src.substring(0, 20) : index
-            }`}
-            className="relative group rounded-md overflow-hidden"
-          >
-            <div className="aspect-square relative">
-              <Image
-                src={src}
-                alt={`Property image ${index + 1}`}
-                fill
-                priority={index === 0}
-                className="object-cover"
-                sizes="(max-width: 768px) 50vw, 25vw"
-              />
-            </div>
-            {isEditable && (
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleRemoveImage(index)}
-                    className="h-8 w-8"
-                    disabled={isOrdering || isUploading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  {index > 0 && (
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      onClick={() => handleMoveImage(index, 'up')}
-                      className="h-8 w-8"
-                      disabled={isOrdering || isUploading}
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {index < displayedImages.length - 1 && (
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      onClick={() => handleMoveImage(index, 'down')}
-                      className="h-8 w-8"
-                      disabled={isOrdering || isUploading}
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+        {displayedImages.map((src, index) => {
+          console.log(`Rendering image ${index}:`, src);
+          return (
+            <div
+              key={`image-${index}-${
+                typeof src === 'string' ? src.substring(0, 20) : index
+              }`}
+              className="relative group rounded-md overflow-hidden"
+            >
+              <div className="aspect-square relative">
+                <Image
+                  src={src}
+                  alt={`Property image ${index + 1}`}
+                  fill
+                  priority={index === 0}
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  onError={() =>
+                    console.error(`Failed to load image ${index}:`, src)
+                  }
+                />
               </div>
-            )}
-            <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
-              {index === 0 ? 'Main' : `#${index + 1}`}
+              {isEditable && (
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleRemoveImage(index)}
+                      className="h-8 w-8"
+                      disabled={isOrdering || isUploading}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    {index > 0 && (
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => handleMoveImage(index, 'up')}
+                        className="h-8 w-8"
+                        disabled={isOrdering || isUploading}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {index < displayedImages.length - 1 && (
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => handleMoveImage(index, 'down')}
+                        className="h-8 w-8"
+                        disabled={isOrdering || isUploading}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                {index === 0 ? 'Main' : `#${index + 1}`}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {displayedImages.length === 0 && (

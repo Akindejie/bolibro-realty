@@ -86,3 +86,51 @@ export const deleteFile = async (fileUrl: string): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Upload a lease document to Supabase storage
+ *
+ * @param file The file to upload (from multer)
+ * @param leaseId The ID of the lease associated with this document
+ * @param documentType The type of document (e.g., 'agreement', 'addendum')
+ * @returns The public URL of the uploaded document
+ */
+export const uploadLeaseDocument = async (
+  file: Express.Multer.File,
+  leaseId: number,
+  documentType: string
+): Promise<string | null> => {
+  try {
+    if (!file) return null;
+
+    // Create a folder structure based on lease ID and document type
+    const folder = `lease-${leaseId}/${documentType}`;
+
+    // Create a unique filename
+    const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    const filePath = `${folder}/${fileName}`;
+
+    // Upload to Supabase documents bucket
+    const { data, error } = await supabase.storage
+      .from(SUPABASE_BUCKETS.DOCUMENTS)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Lease document upload error:', error);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from(SUPABASE_BUCKETS.DOCUMENTS)
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Lease document upload error:', error);
+    return null;
+  }
+};

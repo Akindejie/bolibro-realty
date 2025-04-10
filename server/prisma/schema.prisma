@@ -89,7 +89,7 @@ model Application {
 }
 
 model Lease {
-  id              Int          @id @default(autoincrement())
+  id              Int             @id @default(autoincrement())
   startDate       DateTime
   endDate         DateTime
   rent            Float
@@ -97,8 +97,8 @@ model Lease {
   propertyId      Int
   tenantCognitoId String
   application     Application?
-  property        Property     @relation(fields: [propertyId], references: [id])
-  tenant          Tenant       @relation(fields: [tenantCognitoId], references: [cognitoId])
+  property        Property        @relation(fields: [propertyId], references: [id])
+  tenant          Tenant          @relation(fields: [tenantCognitoId], references: [cognitoId])
   payments        Payment[]
 }
 

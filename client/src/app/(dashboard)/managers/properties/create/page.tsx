@@ -6,6 +6,7 @@ import {
 } from '@/state/api';
 import { Loader2 } from 'lucide-react';
 import PropertyImageGallery from '@/components/PropertyImageGallery';
+import { useState } from 'react';
 
 const CreateProperty = () => {
   const [uploadImages] = useUploadPropertyImagesMutation();

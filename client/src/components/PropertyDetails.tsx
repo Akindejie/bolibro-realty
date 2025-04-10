@@ -75,10 +75,24 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       }
 
       // Use property images
-      // Check in order: photoUrls, images, photos to handle different API responses
-      const propertyImages = property.photoUrls || property.images || [];
-      console.log('Setting local images to:', propertyImages);
-      setLocalImages(propertyImages);
+      // Better handling of image arrays - combine both fields and remove duplicates
+      const imagesArray = Array.isArray(property.images) ? property.images : [];
+      const photoUrlsArray = Array.isArray(property.photoUrls)
+        ? property.photoUrls
+        : [];
+
+      // Combine both arrays and remove duplicates
+      const allPropertyImages = [
+        ...new Set([...imagesArray, ...photoUrlsArray]),
+      ];
+
+      console.log(`Found ${imagesArray.length} images in 'images' field`);
+      console.log(`Found ${photoUrlsArray.length} images in 'photoUrls' field`);
+      console.log(
+        `Combined ${allPropertyImages.length} unique images from both fields`
+      );
+
+      setLocalImages(allPropertyImages);
     }
   }, [property, updatePropertyImages]);
 
@@ -127,9 +141,20 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       }
 
       toast.success('Images uploaded successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading images:', error);
-      toast.error('Failed to upload images. Please try again.');
+
+      // Check if it's a specific error with a message from the server
+      let errorMessage = 'Failed to upload images. Please try again.';
+
+      if (error?.data?.message) {
+        errorMessage = `Server error: ${error.data.message}`;
+        console.error('Server error details:', error.data);
+      } else if (error?.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      toast.error(errorMessage);
     }
   };
 

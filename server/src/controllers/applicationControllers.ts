@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { handlePrismaError } from '../utils/prismaErrorHandler';
 
 const prisma = new PrismaClient();
 
@@ -13,9 +14,9 @@ export const listApplications = async (
     let whereClause = {};
 
     if (userId && userType) {
-      if (userType === "tenant") {
+      if (userType === 'tenant') {
         whereClause = { tenantCognitoId: String(userId) };
-      } else if (userType === "manager") {
+      } else if (userType === 'manager') {
         whereClause = {
           property: {
             managerCognitoId: String(userId),
@@ -55,7 +56,7 @@ export const listApplications = async (
             },
             propertyId: app.propertyId,
           },
-          orderBy: { startDate: "desc" },
+          orderBy: { startDate: 'desc' },
         });
 
         return {
@@ -77,9 +78,7 @@ export const listApplications = async (
 
     res.json(formattedApplications);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error retrieving applications: ${error.message}` });
+    handlePrismaError(error, res, 'listApplications');
   }
 };
 
@@ -105,7 +104,7 @@ export const createApplication = async (
     });
 
     if (!property) {
-      res.status(404).json({ message: "Property not found" });
+      res.status(404).json({ message: 'Property not found' });
       return;
     }
 
@@ -159,9 +158,7 @@ export const createApplication = async (
 
     res.status(201).json(newApplication);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error creating application: ${error.message}` });
+    handlePrismaError(error, res, 'createApplication');
   }
 };
 
@@ -172,7 +169,7 @@ export const updateApplicationStatus = async (
   try {
     const { id } = req.params;
     const { status } = req.body;
-    console.log("status:", status);
+    console.log('status:', status);
 
     const application = await prisma.application.findUnique({
       where: { id: Number(id) },
@@ -183,11 +180,11 @@ export const updateApplicationStatus = async (
     });
 
     if (!application) {
-      res.status(404).json({ message: "Application not found." });
+      res.status(404).json({ message: 'Application not found.' });
       return;
     }
 
-    if (status === "Approved") {
+    if (status === 'Approved') {
       const newLease = await prisma.lease.create({
         data: {
           startDate: new Date(),
@@ -241,8 +238,6 @@ export const updateApplicationStatus = async (
 
     res.json(updatedApplication);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ message: `Error updating application status: ${error.message}` });
+    handlePrismaError(error, res, 'updateApplicationStatus');
   }
 };

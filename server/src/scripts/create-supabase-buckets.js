@@ -66,30 +66,21 @@ async function createBuckets() {
       console.log(`Bucket already exists: ${SUPABASE_BUCKETS.DOCUMENTS}`);
     }
 
-    // Wait for all bucket creations to complete
     if (bucketsToCreate.length > 0) {
-      const results = await Promise.all(bucketsToCreate);
-
-      // Check if any bucket creation failed
-      const failed = results.filter((r) => r.error);
-      if (failed.length > 0) {
-        console.error('Failed to create some buckets:');
-        failed.forEach((f) => console.error(`- ${f.name}: ${f.error.message}`));
-      } else {
-        console.log('All required buckets created successfully');
-      }
+      await Promise.all(bucketsToCreate);
+      console.log('All required buckets created successfully');
     } else {
       console.log('All required buckets already exist');
     }
 
-    // List updated buckets
+    // List buckets again to verify
     const { data: updatedBuckets } = await supabase.storage.listBuckets();
-    console.log('\nBuckets after creation:');
+    console.log('\nUpdated buckets list:');
     updatedBuckets.forEach((bucket) => {
-      console.log(`- ${bucket.name} (${bucket.id})`);
+      console.log(`- ${bucket.name} (${bucket.public ? 'public' : 'private'})`);
     });
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Error creating buckets:', error);
     process.exit(1);
   }
 }
@@ -101,15 +92,16 @@ async function createBucket(supabase, name, isPublic = false) {
     });
 
     if (error) {
-      return { name, error };
+      console.error(`Error creating bucket ${name}:`, error.message);
+      return false;
     }
 
-    return { name, data };
+    console.log(`Successfully created bucket: ${name}`);
+    return true;
   } catch (error) {
-    return { name, error };
+    console.error(`Error creating bucket ${name}:`, error);
+    return false;
   }
 }
 
-createBuckets()
-  .then(() => console.log('\nBucket creation completed'))
-  .catch((err) => console.error('Bucket creation failed:', err));
+createBuckets();

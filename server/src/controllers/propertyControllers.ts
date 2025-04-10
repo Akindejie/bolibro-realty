@@ -170,6 +170,8 @@ export const getProperty = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    console.log(`Getting property with ID: ${id}`);
+
     const property = await prisma.property.findUnique({
       where: { id: Number(id) },
       include: {
@@ -184,6 +186,21 @@ export const getProperty = async (
         }, images=${property.images?.length || 0}`
       );
 
+      console.log(
+        'Property data from database:',
+        JSON.stringify({
+          id: property.id,
+          photoUrls: property.photoUrls,
+          images: property.images,
+          photoUrlsType: property.photoUrls
+            ? typeof property.photoUrls
+            : 'undefined',
+          imagesType: property.images ? typeof property.images : 'undefined',
+          photoUrlsIsArray: Array.isArray(property.photoUrls),
+          imagesIsArray: Array.isArray(property.images),
+        })
+      );
+
       const coordinates: { coordinates: string }[] =
         await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
 
@@ -191,10 +208,11 @@ export const getProperty = async (
       const longitude = geoJSON.coordinates[0];
       const latitude = geoJSON.coordinates[1];
 
+      // Ensure images and photoUrls are always arrays
       const propertyWithCoordinates = {
         ...property,
-        photoUrls: property.photoUrls || [],
-        images: property.images || [],
+        photoUrls: Array.isArray(property.photoUrls) ? property.photoUrls : [],
+        images: Array.isArray(property.images) ? property.images : [],
         location: {
           ...property.location,
           coordinates: {
@@ -203,6 +221,13 @@ export const getProperty = async (
           },
         },
       };
+
+      console.log(
+        'Sending property response with images:',
+        propertyWithCoordinates.images?.length || 0,
+        'photoUrls:',
+        propertyWithCoordinates.photoUrls?.length || 0
+      );
 
       res.json(propertyWithCoordinates);
     } else {
@@ -241,6 +266,10 @@ export const createProperty = asyncHandler(
 
         const results = await Promise.all(uploadPromises);
         photoUrls.push(...(results.filter(Boolean) as string[]));
+
+        // Add a log to show the photos being processed
+        console.log(`Processing ${photoUrls.length} images for new property`);
+        console.log('Image URLs:', photoUrls);
       }
 
       const geocodingUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
@@ -278,6 +307,7 @@ export const createProperty = asyncHandler(
         data: {
           ...propertyData,
           photoUrls,
+          images: photoUrls, // Use the same array for both fields for consistency
           locationId: location.id,
           managerCognitoId,
           amenities:
@@ -612,12 +642,32 @@ export const updateProperty = asyncHandler(
       console.log('Processed amenities:', amenities);
       console.log('Processed highlights:', highlights);
 
+      // Synchronize images and photoUrls fields to ensure consistency
+      const existingImages = property.images || [];
+      const existingPhotoUrls = property.photoUrls || [];
+
+      console.log('Existing image fields before sync:');
+      console.log(`- images: ${existingImages.length} items`);
+      console.log(`- photoUrls: ${existingPhotoUrls.length} items`);
+
+      // Combine both arrays and remove duplicates
+      const allImages = [
+        ...new Set([...existingImages, ...existingPhotoUrls, ...newPhotoUrls]),
+      ];
+      console.log(`Combined unique images: ${allImages.length} items`);
+
+      // Use the combined array for both fields
+      const syncedImages = allImages;
+      const syncedPhotoUrls = allImages;
+
+      console.log('Using synchronized image arrays for both fields');
+
       // Prepare update data with type conversions
       const updateData = {
         name: propertyData.name || property.name,
         description: propertyData.description || property.description,
-        photoUrls: propertyData.photoUrls || property.photoUrls,
-        images: propertyData.images || property.images,
+        photoUrls: syncedPhotoUrls,
+        images: syncedImages,
         amenities,
         highlights,
         isPetsAllowed:
@@ -838,11 +888,149 @@ export const uploadPropertyImage = asyncHandler(
       const propertyId = Number(req.params.id);
       const { id: managerCognitoId } = req.user || {};
 
+      console.log(
+        `Starting image upload for property ${propertyId} by manager ${managerCognitoId}`
+      );
+
+      // Validate Supabase configuration
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+        console.error(
+          'Supabase credentials are missing in environment variables'
+        );
+        res.status(500).json({
+          message: 'Server configuration error: Missing Supabase credentials',
+          details: {
+            urlDefined: !!process.env.SUPABASE_URL,
+            keyDefined: !!process.env.SUPABASE_SERVICE_KEY,
+          },
+        });
+        return;
+      }
+
+      // Check supabase URL
+      const supabaseUrl = process.env.SUPABASE_URL;
+      console.log('Using Supabase URL:', supabaseUrl.substring(0, 20) + '...');
+
+      // Validate that the proper bucket exists
+      try {
+        const { data: buckets, error: bucketError } =
+          await supabase.storage.listBuckets();
+
+        if (bucketError) {
+          console.error('Failed to list Supabase buckets:', bucketError);
+          res.status(500).json({
+            message: 'Failed to access Supabase storage',
+            details: bucketError.message,
+          });
+          return;
+        }
+
+        console.log(
+          'Available Supabase buckets:',
+          buckets.map((b) => b.name).join(', ')
+        );
+        console.log('Looking for bucket:', SUPABASE_BUCKETS.PROPERTY_IMAGES);
+        console.log(
+          'Bucket name type:',
+          typeof SUPABASE_BUCKETS.PROPERTY_IMAGES
+        );
+        console.log(
+          'Bucket name length:',
+          SUPABASE_BUCKETS.PROPERTY_IMAGES.length
+        );
+
+        // Debug each bucket
+        buckets.forEach((bucket) => {
+          console.log(
+            `Bucket "${bucket.name}" - matches our bucket: ${
+              bucket.name === SUPABASE_BUCKETS.PROPERTY_IMAGES
+            }`
+          );
+        });
+
+        const propertyImagesBucket = buckets.find(
+          (b) => b.name === SUPABASE_BUCKETS.PROPERTY_IMAGES
+        );
+
+        if (!propertyImagesBucket) {
+          console.error(
+            `Bucket "${SUPABASE_BUCKETS.PROPERTY_IMAGES}" not found in Supabase`
+          );
+          console.error(
+            'Available buckets:',
+            buckets.map((b) => b.name).join(', ')
+          );
+
+          // Try to create the bucket automatically
+          try {
+            console.log(
+              `Attempting to create missing bucket "${SUPABASE_BUCKETS.PROPERTY_IMAGES}"...`
+            );
+            const { error: createError } = await supabase.storage.createBucket(
+              SUPABASE_BUCKETS.PROPERTY_IMAGES,
+              {
+                public: false,
+                allowedMimeTypes: ['image/*'],
+                fileSizeLimit: 10485760, // 10MB
+              }
+            );
+
+            if (createError) {
+              console.error(`Failed to create bucket: ${createError.message}`);
+
+              // If we still can't create it, fail the request
+              res.status(500).json({
+                message: `Required storage bucket not found: ${SUPABASE_BUCKETS.PROPERTY_IMAGES}`,
+                availableBuckets: buckets.map((b) => b.name),
+                createError: createError.message,
+              });
+              return;
+            } else {
+              console.log(
+                `Successfully created bucket "${SUPABASE_BUCKETS.PROPERTY_IMAGES}"`
+              );
+            }
+          } catch (createErr: any) {
+            console.error(`Error creating bucket: ${createErr.message}`);
+            res.status(500).json({
+              message: `Failed to create required bucket: ${SUPABASE_BUCKETS.PROPERTY_IMAGES}`,
+              error: createErr.message,
+            });
+            return;
+          }
+        } else {
+          console.log(
+            `Found bucket "${SUPABASE_BUCKETS.PROPERTY_IMAGES}" - continuing with upload`
+          );
+        }
+      } catch (bucketCheckError: any) {
+        console.error('Error checking Supabase buckets:', bucketCheckError);
+        res.status(500).json({
+          message: 'Failed to verify Supabase storage configuration',
+          details: bucketCheckError.message,
+        });
+        return;
+      }
+
       // Check if there are files to upload
       const files = req.files as
         | Express.Multer.File[]
         | { [fieldname: string]: Express.Multer.File[] }
         | undefined;
+
+      console.log(
+        'Request files structure:',
+        JSON.stringify({
+          isArray: Array.isArray(files),
+          hasFiles: !!files,
+          fileType: files ? typeof files : 'undefined',
+          fileCount: Array.isArray(files)
+            ? files.length
+            : files
+            ? Object.keys(files).length
+            : 0,
+        })
+      );
 
       // Handle different multer configurations (array vs fields)
       let imagesToUpload: Express.Multer.File[] = [];
@@ -850,21 +1038,35 @@ export const uploadPropertyImage = asyncHandler(
       if (Array.isArray(files)) {
         // Direct array from multer.array()
         imagesToUpload = files;
+        console.log(`Received ${imagesToUpload.length} files as array`);
       } else if (files && typeof files === 'object') {
         // Object from multer.fields()
+        console.log('Files object keys:', Object.keys(files));
+
         if (files.images && Array.isArray(files.images)) {
           imagesToUpload = files.images;
+          console.log(
+            `Received ${imagesToUpload.length} files from 'images' field`
+          );
         } else if (files.photos && Array.isArray(files.photos)) {
           imagesToUpload = files.photos;
+          console.log(
+            `Received ${imagesToUpload.length} files from 'photos' field`
+          );
         }
       }
 
       // Single file fallback
       if (imagesToUpload.length === 0 && req.file) {
         imagesToUpload = [req.file];
+        console.log('Using single file upload fallback');
       }
 
       if (imagesToUpload.length === 0) {
+        console.log('No files found in request');
+        console.log('Request body:', req.body);
+        console.log('Request headers:', req.headers);
+        console.log('Content-Type:', req.headers['content-type']);
         res.status(400).json({ message: 'No files uploaded' });
         return;
       }
@@ -873,86 +1075,188 @@ export const uploadPropertyImage = asyncHandler(
         `Processing ${imagesToUpload.length} images for property ${propertyId}`
       );
 
-      // Find the property
-      const property = await prisma.property.findFirst({
-        where: {
-          id: propertyId,
-          managerCognitoId,
-        },
-        select: {
-          id: true,
-          managerCognitoId: true,
-          images: true,
-        },
-      });
+      // Log the first file details for debugging
+      if (imagesToUpload.length > 0) {
+        const firstFile = imagesToUpload[0];
+        console.log('First file details:');
+        console.log('- Filename:', firstFile.originalname);
+        console.log('- Size:', firstFile.size);
+        console.log('- MIME type:', firstFile.mimetype);
+        console.log(
+          '- Buffer length:',
+          firstFile.buffer?.length || 'No buffer'
+        );
 
-      if (!property) {
-        res.status(404).json({
-          message:
-            'Property not found or you do not have permission to update it',
-        });
-        return;
+        // Validate file buffer
+        if (!firstFile.buffer || firstFile.buffer.length === 0) {
+          console.error('File buffer is empty or missing');
+          res
+            .status(400)
+            .json({ message: 'Invalid file data: Buffer is empty or missing' });
+          return;
+        }
       }
 
-      // Upload all files to Supabase
-      const uploadedUrls: string[] = [];
-      const uploadPromises = imagesToUpload.map(async (file) => {
-        try {
-          const fileName = `${propertyId}/${Date.now()}-${file.originalname}`;
+      // Find the property
+      try {
+        const property = await prisma.property.findFirst({
+          where: {
+            id: propertyId,
+            managerCognitoId,
+          },
+          select: {
+            id: true,
+            managerCognitoId: true,
+            images: true,
+          },
+        });
 
-          const { data, error } = await supabase.storage
-            .from(SUPABASE_BUCKETS.PROPERTY_IMAGES)
-            .upload(fileName, file.buffer, {
-              contentType: file.mimetype,
-              upsert: false,
-            });
+        if (!property) {
+          console.log(
+            `Property ${propertyId} not found or not owned by manager ${managerCognitoId}`
+          );
+          res.status(404).json({
+            message:
+              'Property not found or you do not have permission to update it',
+          });
+          return;
+        }
 
-          if (error) {
-            console.error('Supabase upload error:', error);
-            return null;
+        console.log(
+          `Found property. Current images length: ${
+            property.images?.length || 0
+          }`
+        );
+
+        // Try different bucket names if the main one fails
+        const tryBucketUpload = async (
+          file: Express.Multer.File,
+          fileName: string,
+          bucketNames: string[]
+        ) => {
+          for (const bucketName of bucketNames) {
+            console.log(`Trying upload to bucket: "${bucketName}"`);
+
+            try {
+              const { data, error } = await supabase.storage
+                .from(bucketName)
+                .upload(fileName, file.buffer, {
+                  contentType: file.mimetype,
+                  upsert: true,
+                });
+
+              if (error) {
+                console.log(`Upload to "${bucketName}" failed:`, error);
+                continue; // Try next bucket
+              }
+
+              // Success, get URL
+              console.log(`Upload to "${bucketName}" successful!`);
+              const { data: urlData } = supabase.storage
+                .from(bucketName)
+                .getPublicUrl(fileName);
+
+              return urlData.publicUrl;
+            } catch (uploadError) {
+              console.error(`Error uploading to "${bucketName}":`, uploadError);
+            }
           }
 
-          // Get the public URL
-          const { data: urlData } = supabase.storage
-            .from(SUPABASE_BUCKETS.PROPERTY_IMAGES)
-            .getPublicUrl(fileName);
+          return null; // All buckets failed
+        };
 
-          return urlData.publicUrl;
-        } catch (uploadError) {
-          console.error('Error uploading individual file:', uploadError);
-          return null;
+        // Define fallback bucket names to try in order
+        const bucketNamesToTry = [
+          SUPABASE_BUCKETS.PROPERTY_IMAGES,
+          'property-images',
+          'Property Images',
+        ];
+
+        // Upload files with bucket fallback
+        const uploadPromises = imagesToUpload.map(async (file, index) => {
+          try {
+            const timestamp = Date.now();
+            const safeFilename = file.originalname.replace(
+              /[^a-zA-Z0-9.-]/g,
+              '_'
+            );
+            const fileName = `${propertyId}/${timestamp}-${safeFilename}`;
+
+            console.log(`Uploading file ${index + 1}/${imagesToUpload.length}`);
+
+            // Try upload with bucket fallbacks
+            const fileUrl = await tryBucketUpload(
+              file,
+              fileName,
+              bucketNamesToTry
+            );
+
+            if (fileUrl) {
+              return fileUrl;
+            }
+
+            console.error(
+              `All bucket upload attempts failed for file ${index + 1}`
+            );
+            return null;
+          } catch (error) {
+            console.error(`Error processing file ${index + 1}:`, error);
+            return null;
+          }
+        });
+
+        const results = await Promise.all(uploadPromises);
+        const successfulUploads = results.filter(Boolean) as string[];
+
+        console.log(
+          `Upload results: ${results.length} total, ${successfulUploads.length} successful`
+        );
+
+        if (successfulUploads.length === 0) {
+          console.error('Failed to upload any images');
+          res.status(500).json({
+            message: 'Failed to upload any images',
+            totalAttempted: results.length,
+          });
+          return;
         }
-      });
 
-      const results = await Promise.all(uploadPromises);
-      const successfulUploads = results.filter(Boolean) as string[];
+        // Add new images to the property
+        const currentImages = property.images || [];
+        const updatedImages = [...currentImages, ...successfulUploads];
 
-      if (successfulUploads.length === 0) {
-        res.status(500).json({ message: 'Failed to upload any images' });
-        return;
+        console.log(
+          `Updating property with ${updatedImages.length} images (${currentImages.length} existing + ${successfulUploads.length} new)`
+        );
+
+        await prisma.property.update({
+          where: { id: Number(propertyId) },
+          data: {
+            images: updatedImages,
+          },
+        });
+
+        console.log('Property updated successfully with new images');
+
+        res.status(200).json({
+          success: true,
+          imageUrls: successfulUploads,
+          totalImages: updatedImages.length,
+        });
+      } catch (dbError: any) {
+        console.error('Database error:', dbError.message || dbError);
+        res.status(500).json({
+          message: 'Database error during image upload',
+          details: dbError.message,
+        });
       }
-
-      // Add new images to the property
-      const currentImages = property.images || [];
-      const updatedImages = [...currentImages, ...successfulUploads];
-
-      await prisma.property.update({
-        where: { id: Number(propertyId) },
-        data: {
-          images: updatedImages,
-        },
-      });
-
-      res.status(200).json({
-        success: true,
-        imageUrls: successfulUploads,
-        totalImages: updatedImages.length,
-      });
     } catch (error: any) {
-      console.error('Error uploading property images:', error);
-      res
-        .status(500)
-        .json({ message: `Error uploading images: ${error.message}` });
+      console.error('Error in uploadPropertyImage controller:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({
+        message: `Error uploading images: ${error.message}`,
+        stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+      });
     }
   }
 );
@@ -1009,17 +1313,33 @@ export const updatePropertyImages = asyncHandler(
         const deletedPaths = deletedImages
           .map((url) => {
             // Extract the path after the bucket name in the URL
-            const urlObj = new URL(url);
-            const bucketName = SUPABASE_BUCKETS.PROPERTY_IMAGES.replace(
-              / /g,
-              '%20'
-            );
-            const pathMatch = urlObj.pathname.match(
-              new RegExp(`/${bucketName}/(.+)$`)
-            );
-            const path = pathMatch ? pathMatch[1] : null;
-            console.log(`Extracting path from URL ${url} -> ${path}`);
-            return path;
+            try {
+              const urlObj = new URL(url);
+              // Properly encode the bucket name for URL comparison
+              const bucketName = encodeURIComponent(
+                SUPABASE_BUCKETS.PROPERTY_IMAGES
+              );
+              // Handle both encoded and unencoded bucket names in the URL
+              const encodedPathRegex = new RegExp(`/${bucketName}/(.+)$`);
+              const unencodedPathRegex = new RegExp(
+                `/${SUPABASE_BUCKETS.PROPERTY_IMAGES.replace(
+                  / /g,
+                  '%20'
+                )}/(.+)$`
+              );
+
+              let pathMatch = urlObj.pathname.match(encodedPathRegex);
+              if (!pathMatch) {
+                pathMatch = urlObj.pathname.match(unencodedPathRegex);
+              }
+
+              const path = pathMatch ? pathMatch[1] : null;
+              console.log(`Extracting path from URL ${url} -> ${path}`);
+              return path;
+            } catch (urlError) {
+              console.error(`Error parsing URL ${url}:`, urlError);
+              return null;
+            }
           })
           .filter(Boolean) as string[];
 
@@ -1054,8 +1374,12 @@ export const updatePropertyImages = asyncHandler(
       where: { id: Number(id) },
       data: {
         images: images,
+        photoUrls: images, // Keep both fields in sync
       },
     });
+
+    console.log(`Updated property ${id} with ${images.length} images`);
+    console.log('Both images and photoUrls fields have been synchronized');
 
     res.status(200).json({
       success: true,

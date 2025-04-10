@@ -471,9 +471,23 @@ export const api = createApi({
           const result = await queryFulfilled;
           console.log('Image upload success:', result.data);
           toast.success('Images uploaded successfully', { id: toastId });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Image upload error:', error);
-          toast.error('Failed to upload images', { id: toastId });
+
+          // More detailed error message
+          let errorMessage = 'Failed to upload images.';
+
+          if (error?.error?.data?.message) {
+            errorMessage = `Server error: ${error.error.data.message}`;
+          } else if (error?.error?.status === 404) {
+            errorMessage = 'Upload failed: Storage bucket not found';
+          } else if (error?.error?.status >= 500) {
+            errorMessage =
+              'Server error processing images. Please try again later.';
+          }
+
+          console.log('Detailed error message:', errorMessage);
+          toast.error(errorMessage, { id: toastId });
         }
       },
     }),
@@ -526,6 +540,29 @@ export const api = createApi({
         }
       },
     }),
+
+    // Upload a document for a lease
+    uploadLeaseDocument: build.mutation<
+      { message: string; document: any },
+      { leaseId: number; documentType: string; file: File }
+    >({
+      query: ({ leaseId, documentType, file }) => {
+        const formData = new FormData();
+        formData.append('document', file);
+        formData.append('documentType', documentType);
+
+        return {
+          url: `/leases/${leaseId}/documents`,
+          method: 'POST',
+          body: formData,
+          // Don't set Content-Type header manually - browser sets it with boundary
+        };
+      },
+      // Invalidate the lease cache when a document is uploaded
+      invalidatesTags: (result, error, { leaseId }) => [
+        { type: 'Leases', id: leaseId.toString() },
+      ],
+    }),
   }),
 });
 
@@ -553,4 +590,5 @@ export const {
   useUpdateBulkPropertyStatusMutation,
   useUploadPropertyImagesMutation,
   useUpdatePropertyImagesMutation,
+  useUploadLeaseDocumentMutation,
 } = api;

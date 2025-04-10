@@ -3,7 +3,6 @@
 // Usage: npm run migrate-images
 const { PrismaClient } = require('@prisma/client');
 const dotenv = require('dotenv');
-const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const os = require('os');
@@ -66,24 +65,36 @@ async function downloadFile(url, outputPath) {
     }
 
     // For HTTP URLs
-    const response = await axios({
-      method: 'GET',
-      url: url,
-      responseType: 'arraybuffer',
-    });
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: url,
+        responseType: 'arraybuffer',
+        timeout: 30000, // 30 seconds timeout
+        maxContentLength: 10 * 1024 * 1024, // 10MB max
+        headers: {
+          'User-Agent': 'Bolibro-Migration-Script/1.0',
+        },
+      });
 
-    const buffer = Buffer.from(response.data);
-    fs.writeFileSync(outputPath, buffer);
-    const contentType = response.headers['content-type'] || 'image/jpeg';
+      const buffer = Buffer.from(response.data);
+      fs.writeFileSync(outputPath, buffer);
+      const contentType = response.headers['content-type'] || 'image/jpeg';
 
-    console.log(`Downloaded ${url} to ${outputPath} (${buffer.length} bytes)`);
-    return {
-      success: true,
-      contentType,
-      buffer,
-    };
+      console.log(
+        `Downloaded ${url} to ${outputPath} (${buffer.length} bytes)`
+      );
+      return {
+        success: true,
+        contentType,
+        buffer,
+      };
+    } catch (axiosError) {
+      console.error(`Axios error downloading ${url}:`, axiosError.message);
+      throw axiosError;
+    }
   } catch (error) {
-    console.error(`Failed to download file from ${url}:`, error);
+    console.error(`Failed to download file from ${url}:`, error.message);
     return {
       success: false,
       error,
@@ -96,44 +107,81 @@ async function migrateFile(url, bucket, path) {
   try {
     console.log(`Preparing to migrate file from ${url}...`);
 
-    // Create a temporary file path
-    const tempFilePath = `${tempDir}/${Date.now()}-${path.split('/').pop()}`;
+    // Create a temporary file path with unique name
+    const fileExt = url.startsWith('data:')
+      ? url.match(/^data:image\/(\w+);/)
+        ? url.match(/^data:image\/(\w+);/)[1]
+        : 'jpg'
+      : url.split('.').pop()?.toLowerCase() || 'jpg';
+
+    // Ensure valid extension
+    const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)
+      ? fileExt
+      : 'jpg';
+    const tempFilePath = `${tempDir}/${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}.${validExt}`;
 
     // Download the file
     const downloadResult = await downloadFile(url, tempFilePath);
     if (!downloadResult.success) {
-      throw new Error(`Download failed: ${downloadResult.error}`);
+      throw new Error(
+        `Download failed: ${downloadResult.error?.message || 'Unknown error'}`
+      );
+    }
+
+    // Skip empty files
+    if (!downloadResult.buffer || downloadResult.buffer.length < 100) {
+      throw new Error('File is too small or empty');
     }
 
     // Upload to Supabase
-    console.log(`Uploading to ${bucket}/${path}...`);
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, downloadResult.buffer, {
-        contentType: downloadResult.contentType,
-        upsert: false,
-      });
+    console.log(
+      `Uploading to ${bucket}/${path} (${downloadResult.buffer.length} bytes)...`
+    );
 
-    if (error) {
-      console.error(`Upload error: ${error.message}`);
-      throw error;
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
-
-    console.log(`File uploaded successfully. Public URL: ${urlData.publicUrl}`);
-
-    // Clean up temp file
     try {
-      fs.unlinkSync(tempFilePath);
-    } catch (cleanupErr) {
-      console.warn(`Couldn't remove temp file ${tempFilePath}:`, cleanupErr);
-    }
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(path, downloadResult.buffer, {
+          contentType: downloadResult.contentType,
+          upsert: true, // Use upsert to replace existing files
+        });
 
-    return urlData.publicUrl;
+      if (error) {
+        console.error(`Upload error: ${error.message}`);
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(path);
+
+      console.log(
+        `File uploaded successfully. Public URL: ${urlData.publicUrl}`
+      );
+
+      // Clean up temp file
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (cleanupErr) {
+        console.warn(
+          `Couldn't remove temp file ${tempFilePath}:`,
+          cleanupErr.message
+        );
+      }
+
+      return urlData.publicUrl;
+    } catch (supabaseError) {
+      console.error(
+        `Supabase upload error for ${path}:`,
+        supabaseError.message
+      );
+      throw supabaseError;
+    }
   } catch (error) {
-    console.error(`Failed to migrate file ${url}:`, error);
+    console.error(`Failed to migrate file ${url}:`, error.message);
     return null;
   }
 }
@@ -143,6 +191,9 @@ async function migrateImages() {
   let totalImages = 0;
   let successfulMigrations = 0;
   let failedMigrations = 0;
+  let propertiesProcessed = 0;
+  let propertiesUpdated = 0;
+  let propertiesWithErrors = 0;
 
   try {
     // Test Supabase connection
@@ -151,7 +202,7 @@ async function migrateImages() {
       await supabase.storage.listBuckets();
 
     if (listError) {
-      console.error('ERROR: Failed to connect to Supabase:', listError);
+      console.error('ERROR: Failed to connect to Supabase:', listError.message);
       return;
     }
 
@@ -195,6 +246,7 @@ async function migrateImages() {
 
     // Migrate each property's images
     for (const property of properties) {
+      propertiesProcessed++;
       const propertyId = property.id;
       const allImages = [
         ...(Array.isArray(property.images) ? property.images : []),
@@ -204,7 +256,7 @@ async function migrateImages() {
       totalImages += uniqueImages.length;
 
       console.log(
-        `Property ${propertyId}: Processing ${uniqueImages.length} images`
+        `Property ${propertyId} (${propertiesProcessed}/${properties.length}): Processing ${uniqueImages.length} images`
       );
 
       if (uniqueImages.length === 0) {
@@ -213,6 +265,7 @@ async function migrateImages() {
       }
 
       const newImageUrls = [];
+      let propertyFailed = false;
 
       for (let i = 0; i < uniqueImages.length; i++) {
         const imageUrl = uniqueImages[i];
@@ -227,12 +280,22 @@ async function migrateImages() {
           continue;
         }
 
-        const ext = imageUrl.split('.').pop()?.toLowerCase() || 'jpg';
+        // Generate a clean file path
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 10);
+        const ext = imageUrl.startsWith('data:')
+          ? imageUrl.match(/^data:image\/(\w+);/)
+            ? imageUrl.match(/^data:image\/(\w+);/)[1]
+            : 'jpg'
+          : imageUrl.split('.').pop()?.toLowerCase() || 'jpg';
+
         const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)
           ? ext
           : 'jpg';
 
-        const fileName = `migrated-${i + 1}-${Date.now()}.${validExt}`;
+        const fileName = `migrated-${
+          i + 1
+        }-${timestamp}-${randomId}.${validExt}`;
         const newPath = `${propertyId}/${fileName}`;
 
         console.log(
@@ -240,7 +303,11 @@ async function migrateImages() {
             uniqueImages.length
           }`
         );
-        console.log(`Source: ${imageUrl}`);
+        console.log(
+          `Source: ${imageUrl.substring(0, 100)}${
+            imageUrl.length > 100 ? '...' : ''
+          }`
+        );
         console.log(`Target: ${IMAGE_BUCKET_NAME}/${newPath}`);
 
         const newUrl = await migrateFile(imageUrl, IMAGE_BUCKET_NAME, newPath);
@@ -252,6 +319,7 @@ async function migrateImages() {
         } else {
           console.error(`❌ Failed to migrate image`);
           failedMigrations++;
+          propertyFailed = true;
         }
       }
 
@@ -270,22 +338,29 @@ async function migrateImages() {
             },
           });
           console.log(`✅ Updated property ${propertyId} successfully`);
+          propertiesUpdated++;
         } catch (updateError) {
           console.error(
             `❌ Failed to update property ${propertyId}:`,
-            updateError
+            updateError.message
           );
+          propertiesWithErrors++;
         }
+      } else if (propertyFailed) {
+        propertiesWithErrors++;
       }
     }
 
     console.log('\n===== MIGRATION SUMMARY =====');
+    console.log(`Total properties processed: ${propertiesProcessed}`);
+    console.log(`Properties successfully updated: ${propertiesUpdated}`);
+    console.log(`Properties with errors: ${propertiesWithErrors}`);
     console.log(`Total images processed: ${totalImages}`);
     console.log(`Successfully migrated: ${successfulMigrations}`);
     console.log(`Failed migrations: ${failedMigrations}`);
     console.log('=============================');
   } catch (error) {
-    console.error('Migration failed with error:', error);
+    console.error('Migration failed with error:', error.message);
   } finally {
     await prisma.$disconnect();
     console.log('Migration script completed.');
@@ -295,13 +370,13 @@ async function migrateImages() {
       fs.rmSync(tempDir, { recursive: true, force: true });
       console.log(`Cleaned up temporary directory: ${tempDir}`);
     } catch (error) {
-      console.warn(`Could not clean up temporary directory: ${error}`);
+      console.warn(`Could not clean up temporary directory: ${error.message}`);
     }
   }
 }
 
 // Run the migration function
 migrateImages().catch((error) => {
-  console.error('Error in migration script:', error);
+  console.error('Error in migration script:', error.message);
   process.exit(1);
 });
