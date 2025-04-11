@@ -35,7 +35,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 }) => {
   const [uploadPropertyImages] = useUploadPropertyImagesMutation();
   const [updatePropertyImages] = useUpdatePropertyImagesMutation();
-  const [localImages, setLocalImages] = React.useState<string[]>([]);
+  const [localImages, setLocalImages] = useState<string[]>([]);
   const router = useRouter();
 
   // Initialize localImages from property data
