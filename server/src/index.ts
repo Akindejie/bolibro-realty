@@ -17,6 +17,9 @@ import managerRoutes from './routes/managerRoutes';
 import propertyRoutes from './routes/propertyRoutes';
 import leaseRoutes from './routes/leaseRoutes';
 
+// Import the database ping scheduler with skip-db flag
+const { startPingSchedule } = require('./scripts/ping-supabase');
+
 /* CONFIGURATIONS */
 console.log('Environment variables loaded:');
 console.log('- PORT:', process.env.PORT);
@@ -39,6 +42,18 @@ app.use(cors());
 /* ROUTES */
 app.get('/', (req, res) => {
   res.send('This is home route');
+});
+
+// Add a health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    auth: !!process.env.JWT_SECRET,
+    database: !!process.env.DATABASE_URL,
+    storage: !!process.env.SUPABASE_URL,
+  });
 });
 
 app.use('/properties', propertyRoutes);
@@ -64,4 +79,8 @@ ensureBucketsExist()
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
+
+  // Start pinging Supabase to keep the connection alive
+  // Skip database ping since it's failing, but keep storage active
+  startPingSchedule(10, true); // 10 minutes interval, skip database ping
 });

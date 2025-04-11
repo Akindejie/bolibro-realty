@@ -4,7 +4,12 @@ import { CustomFormField } from '@/components/FormField';
 import Header from '@/components/Header';
 import { Form } from '@/components/ui/form';
 import { PropertyFormData, propertySchema } from '@/lib/schemas';
-import { useCreatePropertyMutation, useGetAuthUserQuery } from '@/state/api';
+import {
+  useCreatePropertyMutation,
+  useGetAuthUserQuery,
+  useUploadPropertyImagesMutation,
+  useUpdatePropertyImagesMutation,
+} from '@/state/api';
 import { AmenityEnum, HighlightEnum, PropertyTypeEnum } from '@/lib/constants';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState, useEffect } from 'react';
@@ -14,6 +19,8 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import PropertyImageGallery from '@/components/PropertyImageGallery';
+import { toast } from 'react-hot-toast';
 
 const NewProperty = () => {
   const [createProperty, { isLoading: isSubmitting, isSuccess }] =
@@ -24,6 +31,9 @@ const NewProperty = () => {
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadPropertyImages] = useUploadPropertyImagesMutation();
+  const [updatePropertyImages] = useUpdatePropertyImagesMutation();
 
   const form = useForm<PropertyFormData>({
     resolver: zodResolver(propertySchema),
@@ -107,28 +117,69 @@ const NewProperty = () => {
     setAddressSearch(suggestion.display_name);
   };
 
+  const handleFileUpload = async (files: FileList | null): Promise<void> => {
+    if (!files || files.length === 0) return;
+
+    try {
+      const tempId = `new-${Date.now()}`;
+      const result = await uploadPropertyImages({
+        propertyId: tempId,
+        images: Array.from(files),
+      }).unwrap();
+
+      if (result && result.imageUrls) {
+        setUploadedImages((prev) => [...prev, ...result.imageUrls]);
+        toast.success('Images uploaded successfully');
+      }
+    } catch (error) {
+      console.error('Failed to upload images:', error);
+      toast.error('Failed to upload images. Please try again.');
+    }
+  };
+
+  const handleImagesChange = async (images: string[]) => {
+    setUploadedImages(images);
+  };
+
   const onSubmit = async (data: PropertyFormData) => {
     if (!authUser?.cognitoInfo?.userId) {
-      throw new Error('No manager ID found');
+      toast.error('No manager ID found');
+      return;
+    }
+
+    // Validate that at least one image is uploaded
+    if (uploadedImages.length === 0) {
+      toast.error('At least one property image is required');
+      return;
     }
 
     const formData = new FormData();
+
     Object.entries(data).forEach(([key, value]) => {
-      if (key === 'photoUrls') {
-        const files = value as File[];
-        files.forEach((file: File) => {
-          formData.append('photos', file);
-        });
-      } else if (Array.isArray(value)) {
-        formData.append(key, JSON.stringify(value));
-      } else {
-        formData.append(key, String(value));
+      if (key !== 'photoUrls') {
+        if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, String(value));
+        }
       }
     });
 
+    if (uploadedImages.length > 0) {
+      formData.append('images', JSON.stringify(uploadedImages));
+    }
+
     formData.append('managerCognitoId', authUser.cognitoInfo.userId);
 
-    await createProperty(formData);
+    try {
+      console.log('Submitting property form...');
+      const result = await createProperty(formData).unwrap();
+      console.log('Property created successfully:', result);
+      toast.success('Property created successfully!');
+    } catch (error) {
+      console.error('Error creating property:', error);
+      toast.error('Failed to create property. Please try again.');
+    }
   };
 
   return (
@@ -142,7 +193,10 @@ const NewProperty = () => {
       <div className="bg-white rounded-xl p-6">
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              console.error('Form validation errors:', errors);
+              toast.error('Please correct the form errors before submitting');
+            })}
             className="p-4 space-y-10"
           >
             {/* Basic Information */}
@@ -263,11 +317,10 @@ const NewProperty = () => {
             {/* Photos */}
             <div>
               <h2 className="text-lg font-semibold mb-4">Photos</h2>
-              <CustomFormField
-                name="photoUrls"
-                label="Property Photos"
-                type="file"
-                accept="image/*"
+              <PropertyImageGallery
+                images={uploadedImages}
+                onImagesChange={handleImagesChange}
+                onImageUpload={handleFileUpload}
               />
             </div>
 
