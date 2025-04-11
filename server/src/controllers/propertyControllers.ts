@@ -17,6 +17,360 @@ interface AuthenticatedRequest extends Request {
 
 const prisma = new PrismaClient();
 
+export const createProperty = async (req: Request, res: Response) => {
+  try {
+    // Log user authentication details to diagnose authentication issues
+    console.log('Authentication details:', {
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      hasAuthHeader: !!req.headers.authorization,
+      authHeader: req.headers.authorization
+        ? `${req.headers.authorization.substring(0, 15)}...`
+        : 'None',
+    });
+
+    const {
+      name,
+      description,
+      type,
+      beds,
+      baths,
+      area,
+      price,
+      address,
+      city,
+      state,
+      postalCode,
+      country,
+      amenities,
+      highlights,
+      managerId,
+      images,
+      pricePerMonth,
+      squareFeet,
+      securityDeposit,
+      applicationFee,
+      isPetsAllowed,
+      isParkingIncluded,
+    } = req.body;
+
+    // Log incoming data for debugging
+    console.log('Creating property with data:', {
+      name,
+      type,
+      beds,
+      baths,
+      area,
+      squareFeet,
+      price,
+      pricePerMonth,
+      securityDeposit,
+      applicationFee,
+      city,
+      managerId,
+      hasImages:
+        !!req.files && Array.isArray(req.files) && req.files.length > 0,
+      imageCount: req.files && Array.isArray(req.files) ? req.files.length : 0,
+      imagesFromJson: images
+        ? typeof images === 'string'
+          ? JSON.parse(images).length
+          : images.length
+        : 0,
+      amenities: typeof amenities === 'string' ? amenities : 'non-string',
+      highlights: typeof highlights === 'string' ? highlights : 'non-string',
+      isPetsAllowed,
+      isParkingIncluded,
+    });
+
+    // Parse amenities - improved to handle both arrays, JSON strings, and single values
+    let parsedAmenities = [];
+    try {
+      if (typeof amenities === 'string') {
+        // Try JSON parsing first
+        try {
+          const jsonParsed = JSON.parse(amenities);
+          parsedAmenities = Array.isArray(jsonParsed)
+            ? jsonParsed
+            : [jsonParsed];
+        } catch (jsonError) {
+          // If JSON parsing fails, it might be a comma-separated string or a single value
+          if (amenities.includes(',')) {
+            parsedAmenities = amenities
+              .split(',')
+              .map((item) => item.trim())
+              .filter(Boolean);
+          } else if (amenities.trim()) {
+            parsedAmenities = [amenities.trim()];
+          }
+          console.log('Using amenities as string value(s):', parsedAmenities);
+        }
+      } else if (Array.isArray(amenities)) {
+        parsedAmenities = amenities;
+      }
+    } catch (error) {
+      console.error('Failed to parse amenities:', error);
+      parsedAmenities = [];
+    }
+
+    // Parse highlights - improved to handle both arrays, JSON strings, and single values
+    let parsedHighlights = [];
+    try {
+      if (typeof highlights === 'string') {
+        // Try JSON parsing first
+        try {
+          const jsonParsed = JSON.parse(highlights);
+          parsedHighlights = Array.isArray(jsonParsed)
+            ? jsonParsed
+            : [jsonParsed];
+        } catch (jsonError) {
+          // If JSON parsing fails, it might be a comma-separated string or a single value
+          if (highlights.includes(',')) {
+            parsedHighlights = highlights
+              .split(',')
+              .map((item) => item.trim())
+              .filter(Boolean);
+          } else if (highlights.trim()) {
+            parsedHighlights = [highlights.trim()];
+          }
+          console.log('Using highlights as string value(s):', parsedHighlights);
+        }
+      } else if (Array.isArray(highlights)) {
+        parsedHighlights = highlights;
+      }
+    } catch (error) {
+      console.error('Failed to parse highlights:', error);
+      parsedHighlights = [];
+    }
+
+    // Get location coordinates from the address
+    let latitude = 0;
+    let longitude = 0;
+
+    if (address && city) {
+      try {
+        const addressString = `${address}, ${city}, ${state || ''} ${
+          postalCode || ''
+        }, ${country || 'USA'}`;
+        console.log('Geocoding address:', addressString);
+
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          addressString
+        )}`;
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'BolibrosRental/1.0',
+          },
+        });
+
+        if (response.data && response.data.length > 0) {
+          latitude = parseFloat(response.data[0].lat);
+          longitude = parseFloat(response.data[0].lon);
+          console.log('Found coordinates:', { latitude, longitude });
+        } else {
+          console.warn('No coordinates found for the address');
+        }
+      } catch (error) {
+        console.error('Error getting location coordinates:', error);
+      }
+    }
+
+    // Process uploaded photos
+    const photoUrls: string[] = [];
+    const uploadedImages: string[] = [];
+
+    // First, process files uploaded through FormData
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      console.log(`Processing ${req.files.length} uploaded photos`);
+
+      const uploadPromises = req.files.map(async (file) => {
+        // Try different bucket names if needed
+        const bucketNamesToTry = [
+          SUPABASE_BUCKETS.PROPERTY_IMAGES,
+          'property-images',
+        ];
+
+        let uploadedUrl = null;
+
+        for (const bucketName of bucketNamesToTry) {
+          try {
+            console.log(`Attempting upload to bucket: "${bucketName}"`);
+            // Create a unique filename
+            const fileName = `${Date.now()}-${file.originalname.replace(
+              /\s+/g,
+              '_'
+            )}`;
+            const filePath = `properties/${fileName}`;
+
+            const { data, error } = await supabase.storage
+              .from(bucketName)
+              .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false,
+              });
+
+            if (error) {
+              console.log(`Upload to "${bucketName}" failed:`, error.message);
+              continue;
+            }
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(filePath);
+
+            uploadedUrl = urlData.publicUrl;
+            console.log(
+              `Successfully uploaded to bucket "${bucketName}"`,
+              uploadedUrl
+            );
+            break;
+          } catch (err) {
+            console.error(`Error trying bucket "${bucketName}":`, err);
+          }
+        }
+
+        return uploadedUrl;
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+      const successfulUploads = uploadResults.filter((url) => url !== null);
+      photoUrls.push(...successfulUploads);
+      uploadedImages.push(...successfulUploads);
+
+      console.log(
+        `Successfully uploaded ${successfulUploads.length} of ${req.files.length} photos`
+      );
+    }
+
+    // Second, process any images provided in JSON format (for sync from offline mode)
+    let parsedImages = [];
+    try {
+      if (images) {
+        if (typeof images === 'string') {
+          parsedImages = JSON.parse(images);
+        } else if (Array.isArray(images)) {
+          parsedImages = images;
+        }
+
+        console.log(`Processing ${parsedImages.length} images from JSON data`);
+
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          // Add the images from JSON to our arrays
+          // These are already uploaded and have URLs
+          photoUrls.push(...parsedImages);
+          uploadedImages.push(...parsedImages);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing images from JSON:', error);
+    }
+
+    // First create the location using raw SQL to handle PostGIS geography type
+    const locationResult = await prisma.$queryRaw`
+      INSERT INTO "Location" (address, city, state, country, "postalCode", coordinates)
+      VALUES (
+        ${address || ''},
+        ${city || ''},
+        ${state || ''},
+        ${country || 'USA'},
+        ${postalCode || ''},
+        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+      )
+      RETURNING id
+    `;
+
+    // Add type checking and error handling for locationResult
+    if (
+      !locationResult ||
+      !Array.isArray(locationResult) ||
+      locationResult.length === 0
+    ) {
+      throw new Error('Failed to create location: Invalid query result');
+    }
+
+    // Get the inserted location ID with type assertion
+    const locationId = (locationResult as Array<{ id: number }>)[0].id;
+    console.log(`Created location with ID: ${locationId}`);
+
+    // Normalize property type (convert to title case for enum compatibility)
+    let propertyTypeNormalized = 'Apartment'; // Default value
+    if (type) {
+      // First lowercase everything, then uppercase first letter
+      propertyTypeNormalized = type.toLowerCase();
+      propertyTypeNormalized =
+        propertyTypeNormalized.charAt(0).toUpperCase() +
+        propertyTypeNormalized.slice(1);
+    }
+
+    // Now create the property with the locationId
+    const newProperty = await prisma.property.create({
+      data: {
+        name,
+        description: description || '',
+        propertyType: propertyTypeNormalized as any,
+        beds: parseInt(beds) || 1,
+        baths: parseFloat(baths) || 1,
+        squareFeet: parseFloat(squareFeet || area) || 1000,
+        pricePerMonth: parseFloat(pricePerMonth || price) || 1000,
+        securityDeposit: parseFloat(securityDeposit) || 500,
+        applicationFee: parseFloat(applicationFee) || 100,
+        isPetsAllowed:
+          isPetsAllowed === 'true' || isPetsAllowed === true ? true : false,
+        isParkingIncluded:
+          isParkingIncluded === 'true' || isParkingIncluded === true
+            ? true
+            : false,
+        photoUrls,
+        images: uploadedImages,
+        amenities: parsedAmenities || [],
+        highlights: parsedHighlights || [],
+        location: {
+          connect: {
+            id: locationId,
+          },
+        },
+        manager: {
+          connect: {
+            cognitoId: req.user?.id || '',
+          },
+        },
+      },
+      include: {
+        location: true,
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    console.log('Property created successfully:', {
+      id: newProperty.id,
+      name: newProperty.name,
+      price: newProperty.pricePerMonth,
+      squareFeet: newProperty.squareFeet,
+      beds: newProperty.beds,
+      baths: newProperty.baths,
+      photoCount: newProperty.photoUrls.length,
+    });
+
+    return res.status(201).json({
+      success: true,
+      property: newProperty,
+    });
+  } catch (error: any) {
+    console.error('Error creating property:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create property',
+      error: error.message,
+    });
+  }
+};
+
 export const getProperties = async (
   req: Request,
   res: Response
@@ -233,389 +587,6 @@ export const getProperty = async (
     res
       .status(500)
       .json({ message: `Error retrieving property: ${err.message}` });
-  }
-};
-
-export const createProperty = async (req: Request, res: Response) => {
-  try {
-    // Log user authentication details to diagnose authentication issues
-    console.log('Authentication details:', {
-      userId: req.user?.id,
-      userRole: req.user?.role,
-      hasAuthHeader: !!req.headers.authorization,
-      authHeader: req.headers.authorization
-        ? `${req.headers.authorization.substring(0, 15)}...`
-        : 'None',
-    });
-
-    const {
-      name,
-      description,
-      type,
-      bedrooms,
-      bathrooms,
-      area,
-      price,
-      address,
-      city,
-      state,
-      postalCode,
-      country,
-      amenities,
-      highlights,
-      managerId,
-      images,
-    } = req.body;
-
-    // Log incoming data for debugging
-    console.log('Creating property with data:', {
-      name,
-      type,
-      bedrooms,
-      city,
-      managerId,
-      hasImages:
-        !!req.files && Array.isArray(req.files) && req.files.length > 0,
-      imageCount: req.files && Array.isArray(req.files) ? req.files.length : 0,
-      imagesFromJson: images
-        ? typeof images === 'string'
-          ? JSON.parse(images).length
-          : images.length
-        : 0,
-      amenities: typeof amenities === 'string' ? amenities : 'non-string',
-      highlights: typeof highlights === 'string' ? highlights : 'non-string',
-    });
-
-    // Parse amenities - improved to handle both arrays, JSON strings, and single values
-    let parsedAmenities = [];
-    try {
-      if (typeof amenities === 'string') {
-        // Try JSON parsing first
-        try {
-          const jsonParsed = JSON.parse(amenities);
-          parsedAmenities = Array.isArray(jsonParsed)
-            ? jsonParsed
-            : [jsonParsed];
-        } catch (jsonError) {
-          // If JSON parsing fails, it might be a comma-separated string or a single value
-          if (amenities.includes(',')) {
-            parsedAmenities = amenities
-              .split(',')
-              .map((item) => item.trim())
-              .filter(Boolean);
-          } else if (amenities.trim()) {
-            parsedAmenities = [amenities.trim()];
-          }
-          console.log('Using amenities as string value(s):', parsedAmenities);
-        }
-      } else if (Array.isArray(amenities)) {
-        parsedAmenities = amenities;
-      }
-    } catch (error) {
-      console.error('Failed to parse amenities:', error);
-      parsedAmenities = [];
-    }
-
-    // Parse highlights - improved to handle both arrays, JSON strings, and single values
-    let parsedHighlights = [];
-    try {
-      if (typeof highlights === 'string') {
-        // Try JSON parsing first
-        try {
-          const jsonParsed = JSON.parse(highlights);
-          parsedHighlights = Array.isArray(jsonParsed)
-            ? jsonParsed
-            : [jsonParsed];
-        } catch (jsonError) {
-          // If JSON parsing fails, it might be a comma-separated string or a single value
-          if (highlights.includes(',')) {
-            parsedHighlights = highlights
-              .split(',')
-              .map((item) => item.trim())
-              .filter(Boolean);
-          } else if (highlights.trim()) {
-            parsedHighlights = [highlights.trim()];
-          }
-          console.log('Using highlights as string value(s):', parsedHighlights);
-        }
-      } else if (Array.isArray(highlights)) {
-        parsedHighlights = highlights;
-      }
-    } catch (error) {
-      console.error('Failed to parse highlights:', error);
-      parsedHighlights = [];
-    }
-
-    // Get location coordinates from the address
-    let latitude = 0;
-    let longitude = 0;
-
-    if (address && city) {
-      try {
-        const addressString = `${address}, ${city}, ${state || ''} ${
-          postalCode || ''
-        }, ${country || 'USA'}`;
-        console.log('Geocoding address:', addressString);
-
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          addressString
-        )}`;
-        const response = await axios.get(url, {
-          headers: {
-            'User-Agent': 'BolibrosRental/1.0',
-          },
-        });
-
-        if (response.data && response.data.length > 0) {
-          latitude = parseFloat(response.data[0].lat);
-          longitude = parseFloat(response.data[0].lon);
-          console.log('Found coordinates:', { latitude, longitude });
-        } else {
-          console.warn('No coordinates found for the address');
-        }
-      } catch (error) {
-        console.error('Error getting location coordinates:', error);
-      }
-    }
-
-    // Process uploaded photos
-    const photoUrls: string[] = [];
-    const uploadedImages: string[] = [];
-
-    // First, process files uploaded through FormData
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      console.log(`Processing ${req.files.length} uploaded photos`);
-
-      const uploadPromises = req.files.map(async (file) => {
-        // Try different bucket names if needed
-        const bucketNamesToTry = [
-          SUPABASE_BUCKETS.PROPERTY_IMAGES,
-          'property-images',
-        ];
-
-        let uploadedUrl = null;
-
-        for (const bucketName of bucketNamesToTry) {
-          try {
-            console.log(`Attempting upload to bucket: "${bucketName}"`);
-            // Create a unique filename
-            const fileName = `${Date.now()}-${file.originalname.replace(
-              /\s+/g,
-              '_'
-            )}`;
-            const filePath = `properties/${fileName}`;
-
-            const { data, error } = await supabase.storage
-              .from(bucketName)
-              .upload(filePath, file.buffer, {
-                contentType: file.mimetype,
-                upsert: false,
-              });
-
-            if (error) {
-              console.log(`Upload to "${bucketName}" failed:`, error.message);
-              continue;
-            }
-
-            // Get public URL
-            const { data: urlData } = supabase.storage
-              .from(bucketName)
-              .getPublicUrl(filePath);
-
-            uploadedUrl = urlData.publicUrl;
-            console.log(
-              `Successfully uploaded to bucket "${bucketName}"`,
-              uploadedUrl
-            );
-            break;
-          } catch (err) {
-            console.error(`Error trying bucket "${bucketName}":`, err);
-          }
-        }
-
-        return uploadedUrl;
-      });
-
-      const uploadResults = await Promise.all(uploadPromises);
-      const successfulUploads = uploadResults.filter((url) => url !== null);
-      photoUrls.push(...successfulUploads);
-      uploadedImages.push(...successfulUploads);
-
-      console.log(
-        `Successfully uploaded ${successfulUploads.length} of ${req.files.length} photos`
-      );
-    }
-
-    // Second, process any images provided in JSON format (for sync from offline mode)
-    let parsedImages = [];
-    try {
-      if (images) {
-        if (typeof images === 'string') {
-          parsedImages = JSON.parse(images);
-        } else if (Array.isArray(images)) {
-          parsedImages = images;
-        }
-
-        console.log(`Processing ${parsedImages.length} images from JSON data`);
-
-        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
-          // Add the images from JSON to our arrays
-          // These are already uploaded and have URLs
-          photoUrls.push(...parsedImages);
-          uploadedImages.push(...parsedImages);
-        }
-      }
-    } catch (error) {
-      console.error('Error processing images from JSON:', error);
-    }
-
-    // First create the location using raw SQL to handle PostGIS geography type
-    const locationResult = await prisma.$queryRaw`
-      INSERT INTO "Location" (address, city, state, country, "postalCode", coordinates)
-      VALUES (
-        ${address || ''},
-        ${city || ''},
-        ${state || ''},
-        ${country || 'USA'},
-        ${postalCode || ''},
-        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
-      )
-      RETURNING id
-    `;
-
-    // Add type checking and error handling for locationResult
-    if (
-      !locationResult ||
-      !Array.isArray(locationResult) ||
-      locationResult.length === 0
-    ) {
-      throw new Error('Failed to create location: Invalid query result');
-    }
-
-    // Get the inserted location ID with type assertion
-    const locationId = (locationResult as Array<{ id: number }>)[0].id;
-    console.log(`Created location with ID: ${locationId}`);
-
-    // Now create the property with the locationId
-    const newProperty = await prisma.property.create({
-      data: {
-        name,
-        description: description || '',
-        propertyType:
-          (type || 'Apartment').charAt(0).toUpperCase() +
-          (type || 'Apartment').slice(1).toLowerCase(),
-        beds: parseInt(bedrooms) || 1,
-        baths: parseFloat(bathrooms) || 1,
-        squareFeet: parseFloat(area) || 0,
-        pricePerMonth: parseFloat(price) || 0,
-        securityDeposit: 0, // Default value
-        applicationFee: 0, // Default value
-        photoUrls,
-        images: uploadedImages,
-        amenities: parsedAmenities || [],
-        highlights: parsedHighlights || [],
-        location: {
-          connect: {
-            id: locationId,
-          },
-        },
-        manager: {
-          connect: {
-            cognitoId: req.user?.id || '',
-          },
-        },
-      },
-      include: {
-        location: true,
-        manager: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    console.log('Property created successfully:', {
-      id: newProperty.id,
-      name: newProperty.name,
-      photoCount: newProperty.photoUrls.length,
-    });
-
-    return res.status(201).json({
-      success: true,
-      property: newProperty,
-    });
-  } catch (error: any) {
-    console.error('Error creating property:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create property',
-      error: error.message,
-    });
-  }
-};
-
-export const deleteProperty = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const propertyId = parseInt(req.params.id);
-    const managerCognitoId = req.user?.id;
-
-    if (!managerCognitoId) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
-    }
-
-    // First check if the property exists and belongs to the manager
-    const property = await prisma.property.findFirst({
-      where: {
-        id: propertyId,
-        managerCognitoId,
-      },
-    });
-
-    if (!property) {
-      res.status(404).json({
-        message:
-          'Property not found or you do not have permission to delete it',
-      });
-      return;
-    }
-
-    // Check if the property has active leases
-    const activeLeases = await prisma.lease.findMany({
-      where: {
-        propertyId,
-        endDate: {
-          gte: new Date(),
-        },
-      },
-    });
-
-    if (activeLeases.length > 0) {
-      res
-        .status(400)
-        .json({ message: 'Cannot delete property with active leases' });
-      return;
-    }
-
-    // Delete the property
-    await prisma.property.delete({
-      where: {
-        id: propertyId,
-      },
-    });
-
-    res.status(200).json({ message: 'Property deleted successfully' });
-  } catch (err: any) {
-    console.error('Error deleting property:', err);
-    res
-      .status(500)
-      .json({ message: `Error deleting property: ${err.message}` });
   }
 };
 
@@ -984,6 +955,68 @@ export const updateProperty = asyncHandler(
   }
 );
 
+export const deleteProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const propertyId = parseInt(req.params.id);
+    const managerCognitoId = req.user?.id;
+
+    if (!managerCognitoId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    // First check if the property exists and belongs to the manager
+    const property = await prisma.property.findFirst({
+      where: {
+        id: propertyId,
+        managerCognitoId,
+      },
+    });
+
+    if (!property) {
+      res.status(404).json({
+        message:
+          'Property not found or you do not have permission to delete it',
+      });
+      return;
+    }
+
+    // Check if the property has active leases
+    const activeLeases = await prisma.lease.findMany({
+      where: {
+        propertyId,
+        endDate: {
+          gte: new Date(),
+        },
+      },
+    });
+
+    if (activeLeases.length > 0) {
+      res
+        .status(400)
+        .json({ message: 'Cannot delete property with active leases' });
+      return;
+    }
+
+    // Delete the property
+    await prisma.property.delete({
+      where: {
+        id: propertyId,
+      },
+    });
+
+    res.status(200).json({ message: 'Property deleted successfully' });
+  } catch (err: any) {
+    console.error('Error deleting property:', err);
+    res
+      .status(500)
+      .json({ message: `Error deleting property: ${err.message}` });
+  }
+};
+
 export const updatePropertyStatus = async (
   req: Request,
   res: Response
@@ -1342,71 +1375,36 @@ export const uploadPropertyImage = asyncHandler(
 
               return urlData.publicUrl;
             } catch (uploadError) {
-              console.error(`Error uploading to "${bucketName}":`, uploadError);
+              console.error(
+                `Error trying bucket "${bucketName}":`,
+                uploadError
+              );
+              continue; // Try next bucket
             }
           }
 
-          return null; // All buckets failed
+          return null;
         };
 
-        // Define fallback bucket names to try in order
-        const bucketNamesToTry = [
-          SUPABASE_BUCKETS.PROPERTY_IMAGES,
-          'property-images',
-          'Property Images',
-        ];
-
-        // Upload files with bucket fallback
-        const uploadPromises = imagesToUpload.map(async (file, index) => {
-          try {
-            const timestamp = Date.now();
-            const safeFilename = file.originalname.replace(
-              /[^a-zA-Z0-9.-]/g,
-              '_'
-            );
-            // Use a special folder for temporary IDs
-            const folderPrefix = isTemporaryId ? 'temp' : propertyId;
-            const fileName = `${folderPrefix}/${timestamp}-${safeFilename}`;
-
-            console.log(`Uploading file ${index + 1}/${imagesToUpload.length}`);
-
-            // Try upload with bucket fallbacks
-            const fileUrl = await tryBucketUpload(
+        const uploadResults = await Promise.all(
+          imagesToUpload.map((file) =>
+            tryBucketUpload(
               file,
-              fileName,
-              bucketNamesToTry
-            );
-
-            if (fileUrl) {
-              return fileUrl;
-            }
-
-            console.error(
-              `All bucket upload attempts failed for file ${index + 1}`
-            );
-            return null;
-          } catch (error) {
-            console.error(`Error processing file ${index + 1}:`, error);
-            return null;
-          }
-        });
-
-        const results = await Promise.all(uploadPromises);
-        const successfulUploads = results.filter(Boolean) as string[];
-
-        console.log(
-          `Upload results: ${results.length} total, ${successfulUploads.length} successful`
+              `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`,
+              [SUPABASE_BUCKETS.PROPERTY_IMAGES, 'property-images']
+            )
+          )
         );
 
-        if (successfulUploads.length === 0) {
-          console.error('Failed to upload any images');
-          res.status(500).json({
-            message: 'Failed to upload any images',
-            totalAttempted: results.length,
-          });
-          return;
-        }
+        const successfulUploads = uploadResults.filter((url) => url !== null);
+        const newPhotoUrls = successfulUploads;
+        const newImages = successfulUploads;
 
+        console.log(
+          `Successfully uploaded ${successfulUploads.length} of ${imagesToUpload.length} photos`
+        );
+
+        // Delete everything from here to line 1476 (right before the uploadPropertyImage function closing bracket)
         // For temporary IDs, we don't update the database, we just return the URLs
         if (isTemporaryId) {
           console.log('Returning uploaded image URLs for new property');
@@ -1455,148 +1453,5 @@ export const uploadPropertyImage = asyncHandler(
         stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
       });
     }
-  }
-);
-
-export const updatePropertyImages = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response) => {
-    // Access authenticated user from the request
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401);
-      throw new Error('Not authorized');
-    }
-
-    const { id } = req.params;
-    const { images } = req.body;
-
-    if (!Array.isArray(images)) {
-      res.status(400);
-      throw new Error('Images must be an array of URLs');
-    }
-
-    const property = await prisma.property.findUnique({
-      where: { id: Number(id) },
-      include: { manager: true },
-    });
-
-    // Check if property exists
-    if (!property) {
-      res.status(404);
-      throw new Error('Property not found');
-    }
-
-    // Ensure property belongs to authenticated user
-    if (property.manager.cognitoId !== userId) {
-      res.status(403);
-      throw new Error('Not authorized to update this property');
-    }
-
-    // Get current images to identify deleted ones
-    const currentImages = property.images || [];
-
-    // Find deleted images to remove from storage
-    const deletedImages = currentImages.filter((url) => !images.includes(url));
-
-    console.log(
-      `Found ${deletedImages.length} images to delete:`,
-      deletedImages
-    );
-
-    // Remove deleted files from Supabase storage
-    if (deletedImages.length > 0) {
-      try {
-        // Extract paths from URLs
-        const deletedPaths = deletedImages
-          .map((url) => {
-            // Extract the path after the bucket name in the URL
-            try {
-              const urlObj = new URL(url);
-              // Properly encode the bucket name for URL comparison
-              const bucketName = encodeURIComponent(
-                SUPABASE_BUCKETS.PROPERTY_IMAGES
-              );
-              // Handle both encoded and unencoded bucket names in the URL
-              const encodedPathRegex = new RegExp(`/${bucketName}/(.+)$`);
-              const unencodedPathRegex = new RegExp(
-                `/${SUPABASE_BUCKETS.PROPERTY_IMAGES.replace(
-                  / /g,
-                  '%20'
-                )}/(.+)$`
-              );
-
-              let pathMatch = urlObj.pathname.match(encodedPathRegex);
-              if (!pathMatch) {
-                pathMatch = urlObj.pathname.match(unencodedPathRegex);
-              }
-
-              const path = pathMatch ? pathMatch[1] : null;
-              console.log(`Extracting path from URL ${url} -> ${path}`);
-              return path;
-            } catch (urlError) {
-              console.error(`Error parsing URL ${url}:`, urlError);
-              return null;
-            }
-          })
-          .filter(Boolean) as string[];
-
-        console.log(
-          `Extracted ${deletedPaths.length} valid paths for deletion:`,
-          deletedPaths
-        );
-
-        if (deletedPaths.length > 0) {
-          console.log(
-            `Attempting to delete ${deletedPaths.length} files from ${SUPABASE_BUCKETS.PROPERTY_IMAGES}`
-          );
-          const { error } = await supabase.storage
-            .from(SUPABASE_BUCKETS.PROPERTY_IMAGES)
-            .remove(deletedPaths);
-
-          if (error) {
-            console.warn('Error removing deleted images from storage:', error);
-            // Continue with the update even if storage deletion fails
-          } else {
-            console.log('Successfully deleted files from storage');
-          }
-        }
-      } catch (error) {
-        console.warn('Error processing deleted images:', error);
-        // Continue with the update even if storage deletion fails
-      }
-    }
-
-    // Update property with new image array
-    const updatedProperty = await prisma.property.update({
-      where: { id: Number(id) },
-      data: {
-        images: images,
-        photoUrls: images, // Keep both fields in sync
-      },
-    });
-
-    console.log(`Updated property ${id} with ${images.length} images`);
-    console.log('Both images and photoUrls fields have been synchronized');
-
-    res.status(200).json({
-      success: true,
-      data: updatedProperty,
-    });
-  }
-);
-
-export const getPropertyLeases = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const propertyId = Number(id);
-
-    const leases = await prisma.lease.findMany({
-      where: { propertyId },
-      include: {
-        tenant: true,
-      },
-    });
-
-    res.status(200).json(leases);
   }
 );

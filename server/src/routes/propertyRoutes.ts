@@ -6,12 +6,10 @@ import {
   deleteProperty,
   getProperties,
   getProperty,
-  getPropertyLeases,
   updateProperty,
   updatePropertyStatus,
   updateBulkPropertyStatus,
   uploadPropertyImage,
-  updatePropertyImages,
 } from '../controllers/propertyControllers';
 
 const router = express.Router();
@@ -19,7 +17,6 @@ const router = express.Router();
 // Public routes that don't require authentication
 router.get('/', getProperties);
 router.get('/:id', getProperty);
-router.get('/:id/leases', getPropertyLeases);
 
 // Protected routes - only managers can access
 router.post(
@@ -51,6 +48,5 @@ router.post(
   handleUpload.array('images'),
   uploadPropertyImage
 );
-router.put('/:id/images', authMiddleware(['manager']), updatePropertyImages);
 
 export default router;

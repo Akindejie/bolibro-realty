@@ -82,7 +82,7 @@ async function pingDatabase() {
 }
 
 // Function to run the ping at regular intervals
-function startPingSchedule(intervalMinutes = 5, forceSkipDb = false) {
+function startPingSchedule(intervalMinutes = 1, forceSkipDb = false) {
   // Override skipDatabase if forceSkipDb is true
   if (forceSkipDb) {
     console.log('Forcing database ping to be skipped (parameter override)');
@@ -108,9 +108,9 @@ function startPingSchedule(intervalMinutes = 5, forceSkipDb = false) {
 // When running this script directly
 if (require.main === module) {
   const intervalArg = process.argv.find((arg) => arg.startsWith('--interval='));
-  const interval = intervalArg ? parseInt(intervalArg.split('=')[1], 10) : 5;
+  const interval = intervalArg ? parseInt(intervalArg.split('=')[1], 10) : 1;
 
-  startPingSchedule(interval); // Ping every X minutes (default: 5)
+  startPingSchedule(interval); // Ping every X minutes (default: 1)
 }
 
 // Export for use in other files

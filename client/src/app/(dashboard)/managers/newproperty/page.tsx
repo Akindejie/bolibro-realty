@@ -155,6 +155,10 @@ const NewProperty = () => {
 
     const formData = new FormData();
 
+    // Log the form data to help debug
+    console.log('Form data to be submitted:', JSON.stringify(data, null, 2));
+
+    // Add all form fields to formData
     Object.entries(data).forEach(([key, value]) => {
       if (key !== 'photoUrls') {
         if (Array.isArray(value)) {
@@ -165,6 +169,11 @@ const NewProperty = () => {
       }
     });
 
+    // Explicitly add beds and baths to ensure they're correctly sent
+    formData.append('beds', String(data.beds));
+    formData.append('baths', String(data.baths));
+
+    // Add images
     if (uploadedImages.length > 0) {
       formData.append('images', JSON.stringify(uploadedImages));
     }
