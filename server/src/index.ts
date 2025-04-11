@@ -10,6 +10,7 @@ import { authMiddleware } from './middleware/authMiddleware';
 import applicationRoutes from './routes/applicationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 import { ensureBucketsExist } from './config/supabase';
+import { checkDatabaseConnection } from './utils/database';
 
 /* ROUTE IMPORT */
 import tenantRoutes from './routes/tenantRoutes';
@@ -45,14 +46,24 @@ app.get('/', (req, res) => {
 });
 
 // Add a health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Check database connectivity
+  const dbConnected = await checkDatabaseConnection();
+
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     auth: !!process.env.JWT_SECRET,
-    database: !!process.env.DATABASE_URL,
+    database: {
+      configured: !!process.env.DATABASE_URL,
+      connected: dbConnected,
+    },
     storage: !!process.env.SUPABASE_URL,
+    services: {
+      database: dbConnected ? 'online' : 'offline',
+      storage: !!process.env.SUPABASE_URL ? 'configured' : 'not configured',
+    },
   });
 });
 
@@ -68,19 +79,39 @@ app.use(errorHandler);
 /* SERVER */
 const port = Number(process.env.PORT) || 3002;
 
-// Ensure Supabase buckets exist
-ensureBucketsExist()
-  .then(() => {
-    console.log('Supabase buckets checked/created');
-  })
-  .catch((err) => {
-    console.error('Error setting up Supabase buckets:', err);
-  });
+// Startup sequence
+async function startServer() {
+  try {
+    // Check database connectivity before starting server
+    const dbConnected = await checkDatabaseConnection();
+    console.log(
+      `Database connection check: ${dbConnected ? 'SUCCESS' : 'FAILED'}`
+    );
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
+    // Even if DB check fails, we'll start the server but skip DB pings
+    const skipDbPing = !dbConnected;
 
-  // Start pinging Supabase to keep the connection alive
-  // Skip database ping since it's failing, but keep storage active
-  startPingSchedule(10, true); // 10 minutes interval, skip database ping
-});
+    // Ensure Supabase buckets exist
+    try {
+      await ensureBucketsExist();
+      console.log('Supabase buckets checked/created');
+    } catch (err) {
+      console.error('Error setting up Supabase buckets:', err);
+    }
+
+    // Start the server
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
+
+      // Start pinging Supabase to keep the connection alive
+      // Skip database ping if initial connection failed
+      startPingSchedule(10, skipDbPing);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();

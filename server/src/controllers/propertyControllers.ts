@@ -5,7 +5,7 @@ const { wktToGeoJSON } = require('@terraformer/wkt');
 import axios from 'axios';
 import asyncHandler from 'express-async-handler';
 import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
-import { uploadFile } from '../utils/fileUpload';
+import { uploadFile, uploadPropertyImageToFolder } from '../utils/fileUpload';
 
 // Define AuthenticatedRequest interface
 interface AuthenticatedRequest extends Request {
@@ -46,6 +46,7 @@ export const createProperty = async (req: Request, res: Response) => {
       highlights,
       managerId,
       images,
+      // Get the fields with their alternative names as well
       pricePerMonth,
       squareFeet,
       securityDeposit,
@@ -142,151 +143,20 @@ export const createProperty = async (req: Request, res: Response) => {
       parsedHighlights = [];
     }
 
-    // Get location coordinates from the address
-    let latitude = 0;
-    let longitude = 0;
-
-    if (address && city) {
-      try {
-        const addressString = `${address}, ${city}, ${state || ''} ${
-          postalCode || ''
-        }, ${country || 'USA'}`;
-        console.log('Geocoding address:', addressString);
-
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          addressString
-        )}`;
-        const response = await axios.get(url, {
-          headers: {
-            'User-Agent': 'BolibrosRental/1.0',
-          },
-        });
-
-        if (response.data && response.data.length > 0) {
-          latitude = parseFloat(response.data[0].lat);
-          longitude = parseFloat(response.data[0].lon);
-          console.log('Found coordinates:', { latitude, longitude });
-        } else {
-          console.warn('No coordinates found for the address');
-        }
-      } catch (error) {
-        console.error('Error getting location coordinates:', error);
-      }
-    }
-
-    // Process uploaded photos
-    const photoUrls: string[] = [];
-    const uploadedImages: string[] = [];
-
-    // First, process files uploaded through FormData
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      console.log(`Processing ${req.files.length} uploaded photos`);
-
-      const uploadPromises = req.files.map(async (file) => {
-        // Try different bucket names if needed
-        const bucketNamesToTry = [
-          SUPABASE_BUCKETS.PROPERTY_IMAGES,
-          'property-images',
-        ];
-
-        let uploadedUrl = null;
-
-        for (const bucketName of bucketNamesToTry) {
-          try {
-            console.log(`Attempting upload to bucket: "${bucketName}"`);
-            // Create a unique filename
-            const fileName = `${Date.now()}-${file.originalname.replace(
-              /\s+/g,
-              '_'
-            )}`;
-            const filePath = `properties/${fileName}`;
-
-            const { data, error } = await supabase.storage
-              .from(bucketName)
-              .upload(filePath, file.buffer, {
-                contentType: file.mimetype,
-                upsert: false,
-              });
-
-            if (error) {
-              console.log(`Upload to "${bucketName}" failed:`, error.message);
-              continue;
-            }
-
-            // Get public URL
-            const { data: urlData } = supabase.storage
-              .from(bucketName)
-              .getPublicUrl(filePath);
-
-            uploadedUrl = urlData.publicUrl;
-            console.log(
-              `Successfully uploaded to bucket "${bucketName}"`,
-              uploadedUrl
-            );
-            break;
-          } catch (err) {
-            console.error(`Error trying bucket "${bucketName}":`, err);
-          }
-        }
-
-        return uploadedUrl;
-      });
-
-      const uploadResults = await Promise.all(uploadPromises);
-      const successfulUploads = uploadResults.filter((url) => url !== null);
-      photoUrls.push(...successfulUploads);
-      uploadedImages.push(...successfulUploads);
-
-      console.log(
-        `Successfully uploaded ${successfulUploads.length} of ${req.files.length} photos`
-      );
-    }
-
-    // Second, process any images provided in JSON format (for sync from offline mode)
-    let parsedImages = [];
-    try {
-      if (images) {
-        if (typeof images === 'string') {
-          parsedImages = JSON.parse(images);
-        } else if (Array.isArray(images)) {
-          parsedImages = images;
-        }
-
-        console.log(`Processing ${parsedImages.length} images from JSON data`);
-
-        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
-          // Add the images from JSON to our arrays
-          // These are already uploaded and have URLs
-          photoUrls.push(...parsedImages);
-          uploadedImages.push(...parsedImages);
-        }
-      }
-    } catch (error) {
-      console.error('Error processing images from JSON:', error);
-    }
-
-    // First create the location using raw SQL to handle PostGIS geography type
+    // First, process location
+    console.log('Creating location for property');
     const locationResult = await prisma.$queryRaw`
-      INSERT INTO "Location" (address, city, state, country, "postalCode", coordinates)
+      INSERT INTO "Location" (address, city, state, "postalCode", country, coordinates)
       VALUES (
         ${address || ''},
         ${city || ''},
         ${state || ''},
-        ${country || 'USA'},
         ${postalCode || ''},
-        ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+        ${country || ''},
+        ST_SetSRID(ST_MakePoint(0, 0), 4326)
       )
-      RETURNING id
+      RETURNING id;
     `;
-
-    // Add type checking and error handling for locationResult
-    if (
-      !locationResult ||
-      !Array.isArray(locationResult) ||
-      locationResult.length === 0
-    ) {
-      throw new Error('Failed to create location: Invalid query result');
-    }
 
     // Get the inserted location ID with type assertion
     const locationId = (locationResult as Array<{ id: number }>)[0].id;
@@ -302,6 +172,10 @@ export const createProperty = async (req: Request, res: Response) => {
         propertyTypeNormalized.slice(1);
     }
 
+    // Initialize arrays for image URLs
+    let photoUrls: string[] = [];
+    let uploadedImages: string[] = [];
+
     // Now create the property with the locationId
     const newProperty = await prisma.property.create({
       data: {
@@ -310,8 +184,8 @@ export const createProperty = async (req: Request, res: Response) => {
         propertyType: propertyTypeNormalized as any,
         beds: parseInt(beds) || 1,
         baths: parseFloat(baths) || 1,
-        squareFeet: parseFloat(squareFeet || area) || 1000,
-        pricePerMonth: parseFloat(pricePerMonth || price) || 1000,
+        squareFeet: parseFloat(squareFeet || area) || 0,
+        pricePerMonth: parseFloat(pricePerMonth || price) || 0,
         securityDeposit: parseFloat(securityDeposit) || 500,
         applicationFee: parseFloat(applicationFee) || 100,
         isPetsAllowed:
@@ -320,8 +194,8 @@ export const createProperty = async (req: Request, res: Response) => {
           isParkingIncluded === 'true' || isParkingIncluded === true
             ? true
             : false,
-        photoUrls,
-        images: uploadedImages,
+        photoUrls: [],
+        images: [],
         amenities: parsedAmenities || [],
         highlights: parsedHighlights || [],
         location: {
@@ -354,19 +228,87 @@ export const createProperty = async (req: Request, res: Response) => {
       squareFeet: newProperty.squareFeet,
       beds: newProperty.beds,
       baths: newProperty.baths,
-      photoCount: newProperty.photoUrls.length,
     });
 
-    return res.status(201).json({
+    // Now process files uploaded through FormData
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      console.log(`Processing ${req.files.length} uploaded photos`);
+
+      // Now upload the images using the property ID for folder organization
+      console.log(`Uploading images to property-${newProperty.id} folder`);
+      const uploadPromises = req.files.map((file) =>
+        uploadPropertyImageToFolder(file, newProperty.id)
+      );
+
+      const uploadResults = await Promise.all(uploadPromises);
+      const successfulUploads = uploadResults.filter((url) => url !== null);
+
+      console.log(
+        `Successfully uploaded ${successfulUploads.length} of ${req.files.length} photos to property-${newProperty.id} folder`
+      );
+
+      // Update the property with the image URLs
+      if (successfulUploads.length > 0) {
+        await prisma.property.update({
+          where: { id: newProperty.id },
+          data: {
+            photoUrls: successfulUploads,
+            images: successfulUploads,
+          },
+        });
+
+        console.log(
+          `Updated property record with ${successfulUploads.length} image URLs`
+        );
+
+        // Update our local variables to return in the response
+        photoUrls = successfulUploads;
+        uploadedImages = successfulUploads;
+      }
+    }
+
+    // Handle additional images from JSON
+    if (images) {
+      try {
+        const parsedImages =
+          typeof images === 'string' ? JSON.parse(images) : images;
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          console.log(`Adding ${parsedImages.length} images from JSON`);
+
+          // Update the images in the database
+          const allImages = [...uploadedImages, ...parsedImages];
+
+          await prisma.property.update({
+            where: { id: newProperty.id },
+            data: {
+              images: allImages,
+              photoUrls: allImages,
+            },
+          });
+
+          console.log('Successfully added JSON images to property');
+          photoUrls = allImages;
+          uploadedImages = allImages;
+        }
+      } catch (err) {
+        console.error('Error processing images from JSON:', err);
+      }
+    }
+
+    res.status(201).json({
       success: true,
-      property: newProperty,
+      property: {
+        ...newProperty,
+        photoUrls,
+        images: uploadedImages,
+      },
     });
   } catch (error: any) {
     console.error('Error creating property:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to create property',
-      error: error.message,
+    console.error('Error stack:', error.stack);
+    res.status(500).json({
+      message: `Error creating property: ${error.message}`,
+      stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
     });
   }
 };
@@ -650,12 +592,21 @@ export const updateProperty = asyncHandler(
       // Handle file uploads
       let newPhotoUrls: string[] = [];
       if (files && files.photos && Array.isArray(files.photos)) {
+        console.log(
+          `Processing ${files.photos.length} new photos for property ${propertyId}`
+        );
+
+        // Use the property ID for folder organization
         const uploadPromises = files.photos.map((photo) => {
-          return uploadFile(photo, 'properties');
+          return uploadPropertyImageToFolder(photo, propertyId);
         });
 
         const results = await Promise.all(uploadPromises);
         newPhotoUrls = results.filter(Boolean) as string[];
+
+        console.log(
+          `Successfully uploaded ${newPhotoUrls.length} of ${files.photos.length} new photos to property-${propertyId} folder`
+        );
       }
 
       // Add new photos to existing ones
@@ -1345,54 +1296,11 @@ export const uploadPropertyImage = asyncHandler(
           );
         }
 
-        // Try different bucket names if the main one fails
-        const tryBucketUpload = async (
-          file: Express.Multer.File,
-          fileName: string,
-          bucketNames: string[]
-        ) => {
-          for (const bucketName of bucketNames) {
-            console.log(`Trying upload to bucket: "${bucketName}"`);
-
-            try {
-              const { data, error } = await supabase.storage
-                .from(bucketName)
-                .upload(fileName, file.buffer, {
-                  contentType: file.mimetype,
-                  upsert: true,
-                });
-
-              if (error) {
-                console.log(`Upload to "${bucketName}" failed:`, error);
-                continue; // Try next bucket
-              }
-
-              // Success, get URL
-              console.log(`Upload to "${bucketName}" successful!`);
-              const { data: urlData } = supabase.storage
-                .from(bucketName)
-                .getPublicUrl(fileName);
-
-              return urlData.publicUrl;
-            } catch (uploadError) {
-              console.error(
-                `Error trying bucket "${bucketName}":`,
-                uploadError
-              );
-              continue; // Try next bucket
-            }
-          }
-
-          return null;
-        };
-
+        // Use the new utility function to upload images to property-specific folders
+        console.log(`Uploading images to property-${propertyId} folder`);
         const uploadResults = await Promise.all(
           imagesToUpload.map((file) =>
-            tryBucketUpload(
-              file,
-              `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`,
-              [SUPABASE_BUCKETS.PROPERTY_IMAGES, 'property-images']
-            )
+            uploadPropertyImageToFolder(file, propertyId)
           )
         );
 
@@ -1401,7 +1309,7 @@ export const uploadPropertyImage = asyncHandler(
         const newImages = successfulUploads;
 
         console.log(
-          `Successfully uploaded ${successfulUploads.length} of ${imagesToUpload.length} photos`
+          `Successfully uploaded ${successfulUploads.length} of ${imagesToUpload.length} photos to property-${propertyId} folder`
         );
 
         // Delete everything from here to line 1476 (right before the uploadPropertyImage function closing bracket)

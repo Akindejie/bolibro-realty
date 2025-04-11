@@ -1,120 +1,229 @@
-require('dotenv').config();
+// Supabase ping module
+// This script keeps connections alive by pinging Supabase services at regular intervals
+
 const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
 
-// Check if we should skip database ping (command line argument)
-const skipDatabase = process.argv.includes('--skip-db');
-
-// Initialize Prisma client only if we're not skipping database
-const prisma = skipDatabase ? null : new PrismaClient();
-
-// Initialize Supabase client
+// Load environment variables
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
+// Initialize Prisma for database pings
+const prisma = new PrismaClient({
+  log: ['error'],
+  errorFormat: 'minimal',
+});
+
+// Initialize Supabase for storage pings
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
+
+// Track consecutive failures to implement exponential backoff
+let consecutiveDbFailures = 0;
+let consecutiveStorageFailures = 0;
+const MAX_BACKOFF_MINUTES = 30; // Maximum backoff time
+const BASE_BACKOFF_TIME = 1; // Base time in minutes
+
+/**
+ * Calculate backoff time with exponential increase
+ * @param {number} consecutiveFailures - Number of consecutive failures
+ * @returns {number} - Backoff time in minutes
+ */
+function calculateBackoffTime(consecutiveFailures) {
+  // Exponential backoff: 2^failures minutes with a cap
+  const backoffMinutes = Math.min(
+    BASE_BACKOFF_TIME * Math.pow(2, consecutiveFailures),
+    MAX_BACKOFF_MINUTES
+  );
+  return backoffMinutes;
+}
+
+/**
+ * Ping the database to keep the connection alive
+ * @returns {Promise<boolean>} - Success status
+ */
 async function pingDatabase() {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] Starting ping process...`);
-
-  let databaseSuccess = true;
-  let storageSuccess = true;
-
-  // Step 1: Ping database if not skipped
-  if (!skipDatabase) {
-    try {
-      console.log(`[${timestamp}] Pinging database...`);
-      const prismaResult = await prisma.$queryRaw`SELECT 1 as connected`;
-      console.log(`[${timestamp}] ✅ Prisma ping successful:`, prismaResult);
-    } catch (error) {
-      console.error(`[${timestamp}] ❌ Database ping failed:`, error.message);
-      databaseSuccess = false;
-    }
-  } else {
-    console.log(
-      `[${timestamp}] Skipping database ping (--skip-db flag detected)`
-    );
-  }
-
-  // Step 2: Ping Supabase storage (always do this)
   try {
-    console.log(`[${timestamp}] Pinging Supabase storage...`);
-    const { data: buckets, error } = await supabase.storage.listBuckets();
+    console.log('[' + new Date().toISOString() + '] Pinging database...');
+    // Simple query to check database connectivity
+    const result = await prisma.$queryRaw`SELECT 1 as connected`;
 
-    if (error) {
-      console.error(`[${timestamp}] ❌ Supabase storage ping failed:`, error);
-      storageSuccess = false;
-    } else {
-      console.log(
-        `[${timestamp}] ✅ Supabase storage ping successful. Found ${buckets.length} buckets.`
-      );
-
-      // Optionally list some files from a bucket
-      if (buckets.length > 0) {
-        try {
-          const firstBucket = buckets[0].name;
-          const { data: files, error: filesError } = await supabase.storage
-            .from(firstBucket)
-            .list();
-
-          if (filesError) {
-            console.error(`Error listing files: ${filesError.message}`);
-          } else {
-            console.log(
-              `Found ${files.length} files/folders in "${firstBucket}"`
-            );
-          }
-        } catch (listError) {
-          console.error('Error listing files:', listError);
-        }
-      }
-    }
+    console.log(
+      '[' + new Date().toISOString() + '] ✅ Prisma ping successful:',
+      result
+    );
+    // Reset consecutive failures on success
+    consecutiveDbFailures = 0;
+    return true;
   } catch (error) {
     console.error(
-      `[${timestamp}] ❌ Error pinging Supabase storage:`,
+      '[' + new Date().toISOString() + '] ❌ Prisma ping failed:',
       error.message
     );
-    storageSuccess = false;
+    // Increment consecutive failures
+    consecutiveDbFailures++;
+    return false;
   }
-
-  // Overall success is true if we're skipping database OR database ping succeeded, AND storage ping succeeded
-  return (skipDatabase || databaseSuccess) && storageSuccess;
 }
 
-// Function to run the ping at regular intervals
+/**
+ * Ping Supabase storage to keep the connection alive
+ * @returns {Promise<boolean>} - Success status
+ */
+async function pingStorage() {
+  try {
+    console.log(
+      '[' + new Date().toISOString() + '] Pinging Supabase storage...'
+    );
+    // List buckets to check storage connectivity
+    const { data, error } = await supabase.storage.listBuckets();
+
+    if (error) throw error;
+
+    console.log(
+      '[' +
+        new Date().toISOString() +
+        '] ✅ Supabase storage ping successful. Found ' +
+        data.length +
+        ' buckets.'
+    );
+
+    // List files in a bucket as an additional check (if buckets exist)
+    if (data.length > 0) {
+      try {
+        const { data: files, error: filesError } = await supabase.storage
+          .from(data[0].name)
+          .list();
+
+        if (!filesError) {
+          console.log(
+            `Found ${files?.length || 0} files/folders in "${data[0].name}"`
+          );
+        }
+      } catch (listError) {
+        console.warn('Could not list files in bucket:', listError.message);
+      }
+    }
+
+    // Reset consecutive failures on success
+    consecutiveStorageFailures = 0;
+    return true;
+  } catch (error) {
+    console.error(
+      '[' + new Date().toISOString() + '] ❌ Supabase storage ping failed:',
+      error.message
+    );
+    // Increment consecutive failures
+    consecutiveStorageFailures++;
+    return false;
+  }
+}
+
+/**
+ * Start pinging Supabase services at specified intervals
+ * @param {number} intervalMinutes - Interval in minutes between pings
+ * @param {boolean} forceSkipDb - Force skip database pings (for when DB is known to be down)
+ */
 function startPingSchedule(intervalMinutes = 1, forceSkipDb = false) {
-  // Override skipDatabase if forceSkipDb is true
-  if (forceSkipDb) {
+  console.log(
+    'Ping scheduler started. Will ping' +
+      (forceSkipDb ? ' only storage' : ' database and storage') +
+      ' every ' +
+      intervalMinutes +
+      ' minutes.'
+  );
+
+  let dbPingInterval = null;
+  let storagePingInterval = null;
+
+  // Initial pings
+  if (!forceSkipDb) {
+    pingDatabase();
+  } else {
     console.log('Forcing database ping to be skipped (parameter override)');
-    global.skipDatabase = true;
+  }
+  pingStorage();
+
+  // Setup regular ping for database
+  if (!forceSkipDb) {
+    dbPingInterval = setInterval(async () => {
+      const success = await pingDatabase();
+
+      // If ping fails, adjust interval with backoff
+      if (!success && dbPingInterval) {
+        clearInterval(dbPingInterval);
+        const backoffMinutes = calculateBackoffTime(consecutiveDbFailures);
+        console.log(
+          `Database ping failed. Backing off for ${backoffMinutes} minutes before next attempt.`
+        );
+
+        // Setup new interval with backoff
+        dbPingInterval = setInterval(async () => {
+          const retrySuccess = await pingDatabase();
+
+          // If ping succeeds, reset to normal interval
+          if (retrySuccess) {
+            clearInterval(dbPingInterval);
+            dbPingInterval = setInterval(
+              () => pingDatabase(),
+              intervalMinutes * 60 * 1000
+            );
+            console.log(
+              `Database ping recovered. Resetting to normal interval of ${intervalMinutes} minutes.`
+            );
+          }
+        }, backoffMinutes * 60 * 1000);
+      }
+    }, intervalMinutes * 60 * 1000);
   }
 
-  // Run initial ping immediately
-  pingDatabase();
+  // Setup regular ping for storage
+  storagePingInterval = setInterval(async () => {
+    const success = await pingStorage();
 
-  // Set up regular interval (convert minutes to milliseconds)
-  const interval = intervalMinutes * 60 * 1000;
+    // If ping fails, adjust interval with backoff
+    if (!success && storagePingInterval) {
+      clearInterval(storagePingInterval);
+      const backoffMinutes = calculateBackoffTime(consecutiveStorageFailures);
+      console.log(
+        `Storage ping failed. Backing off for ${backoffMinutes} minutes before next attempt.`
+      );
 
-  // Schedule regular pings
-  setInterval(pingDatabase, interval);
+      // Setup new interval with backoff
+      storagePingInterval = setInterval(async () => {
+        const retrySuccess = await pingStorage();
 
-  console.log(
-    `Ping scheduler started. Will ping ${
-      skipDatabase || forceSkipDb ? 'only storage' : 'database and storage'
-    } every ${intervalMinutes} minutes.`
-  );
+        // If ping succeeds, reset to normal interval
+        if (retrySuccess) {
+          clearInterval(storagePingInterval);
+          storagePingInterval = setInterval(
+            () => pingStorage(),
+            intervalMinutes * 60 * 1000
+          );
+          console.log(
+            `Storage ping recovered. Resetting to normal interval of ${intervalMinutes} minutes.`
+          );
+        }
+      }, backoffMinutes * 60 * 1000);
+    }
+  }, intervalMinutes * 60 * 1000);
 }
 
-// When running this script directly
+// For command-line usage
 if (require.main === module) {
-  const intervalArg = process.argv.find((arg) => arg.startsWith('--interval='));
-  const interval = intervalArg ? parseInt(intervalArg.split('=')[1], 10) : 1;
-
-  startPingSchedule(interval); // Ping every X minutes (default: 1)
+  const interval = process.argv[2] ? parseInt(process.argv[2], 10) : 10;
+  console.log(
+    `Starting Supabase ping scheduler with ${interval} minute interval`
+  );
+  startPingSchedule(interval); // Ping every X minutes (default: 10)
 }
 
-// Export for use in other files
 module.exports = {
   pingDatabase,
+  pingStorage,
   startPingSchedule,
 };

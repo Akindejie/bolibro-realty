@@ -160,3 +160,78 @@ export const uploadLeaseDocument = async (
     return null;
   }
 };
+
+/**
+ * Upload a property image with organized folder structure
+ *
+ * @param file The file to upload (from multer)
+ * @param propertyId The ID of the property
+ * @returns The public URL of the uploaded image
+ */
+export const uploadPropertyImageToFolder = async (
+  file: Express.Multer.File,
+  propertyId: string | number
+): Promise<string | null> => {
+  try {
+    if (!file) return null;
+
+    // Create a folder structure based on property ID
+    const folder = `property-${propertyId}`;
+
+    // Create a unique filename
+    const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    const filePath = `${folder}/${fileName}`;
+
+    // Define fallback bucket names to try
+    const bucketNamesToTry = [
+      SUPABASE_BUCKETS.PROPERTY_IMAGES,
+      'property-images',
+    ];
+
+    // Try uploading to each bucket until successful
+    let imageUrl = null;
+
+    for (const bucketName of bucketNamesToTry) {
+      try {
+        console.log(
+          `Attempting upload to bucket: "${bucketName}" in folder: "${folder}"`
+        );
+
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (error) {
+          console.log(`Upload to "${bucketName}" failed:`, error.message);
+          continue;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+
+        imageUrl = urlData.publicUrl;
+        console.log(
+          `Successfully uploaded to bucket "${bucketName}" at path "${filePath}"`
+        );
+        break;
+      } catch (err) {
+        console.error(`Error trying bucket "${bucketName}":`, err);
+      }
+    }
+
+    if (!imageUrl) {
+      console.error('Failed to upload image to any bucket');
+      return null;
+    }
+
+    return imageUrl;
+  } catch (error) {
+    console.error('Property image upload error:', error);
+    return null;
+  }
+};
