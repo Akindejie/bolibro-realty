@@ -18,18 +18,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (authUser) {
       const userRole = authUser.userRole?.toLowerCase();
-      console.log('Dashboard layout - User role:', userRole);
-      console.log('Current pathname:', pathname);
 
       if (
         (userRole === 'manager' && pathname.startsWith('/tenants')) ||
         (userRole === 'tenant' && pathname.startsWith('/managers'))
       ) {
-        console.log(
-          'Redirecting to appropriate dashboard:',
-          userRole === 'manager' ? '/managers/properties' : '/tenants/favorites'
-        );
-
         // Redirect to correct dashboard section
         router.push(
           userRole === 'manager'
@@ -40,10 +33,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         // Keep loading state true until redirection completes
       } else if (userRole === 'manager' && pathname === '/managers') {
         // Redirect from /managers to /managers/properties
-        console.log('Redirecting from /managers to /managers/properties');
         router.push('/managers/properties', { scroll: false });
       } else {
-        console.log('User is in the correct dashboard section');
         setIsLoading(false);
       }
     } else if (!authLoading) {
@@ -60,7 +51,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <Navbar />
         <div style={{ marginTop: `${NAVBAR_HEIGHT}px` }}>
           <main className="flex">
-            <Sidebar userType={authUser.userRole.toLowerCase()} />
+            <Sidebar
+              userType={authUser.userRole.toLowerCase() as 'manager' | 'tenant'}
+            />
             <div className="flex-grow transition-all duration-300">
               {children}
             </div>

@@ -29,7 +29,6 @@ import { useRouter } from 'next/navigation';
 
 const Properties = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
-  console.log('User object:', JSON.stringify(user, null, 2));
 
   // Get the ID from the JWT token if available, otherwise fall back to the user.id
   // The JWT token contains the correct Supabase ID we need to use

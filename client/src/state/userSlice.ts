@@ -19,7 +19,7 @@ export interface UserState {
 const initialState: UserState = {
   user: null,
   isAuthenticated: false,
-  loading: true,
+  loading: false,
 };
 
 export const userSlice = createSlice({
@@ -46,9 +46,13 @@ export const userSlice = createSlice({
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
     },
+    rehydrationComplete: (state) => {
+      state.loading = false;
+    },
   },
 });
 
-export const { setUser, clearUser, setLoading } = userSlice.actions;
+export const { setUser, clearUser, setLoading, rehydrationComplete } =
+  userSlice.actions;
 
 export default userSlice.reducer;

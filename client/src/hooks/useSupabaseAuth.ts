@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useAppDispatch } from '@/state/redux';
-import { clearUser, setLoading, setUser } from '@/state/userSlice';
+import { useAppDispatch, useAppSelector } from '@/state/redux';
+import { clearUser, setLoading } from '@/state/userSlice';
 import { useGetUserByRoleQuery } from '@/state/api';
 
 export function useSupabaseAuth() {
@@ -10,16 +10,46 @@ export function useSupabaseAuth() {
   const router = useRouter();
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const { isAuthenticated, user, loading } = useAppSelector(
+    (state) => state.user
+  );
 
   // We'll use skip here initially until we have determined the user's role
   const { data: userData, error: userError } = useGetUserByRoleQuery(
     currentRole || 'tenant',
-    { skip: !currentRole }
+    { skip: !currentRole || loading }
   );
 
+  // Simplified validate session function to just check if Supabase session exists
+  const validateSession = useCallback(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Session validation error:', error);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
+    // Skip if we're loading
+    if (loading) return;
+
     const initializeAuth = async () => {
+      // If already initialized, don't do it again
+      if (isInitialized) return;
+
       try {
+        // If already authenticated from persisted state, just set initialized and role
+        if (isAuthenticated && user?.role) {
+          setCurrentRole(user.role);
+          setIsInitialized(true);
+          return;
+        }
+
         dispatch(setLoading(true));
 
         // Check for existing session
@@ -60,8 +90,6 @@ export function useSupabaseAuth() {
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
-
         if (event === 'SIGNED_IN' && session) {
           // User signed in, fetch their data
           const {
@@ -72,7 +100,7 @@ export function useSupabaseAuth() {
             const role = user.user_metadata?.role || 'tenant';
             setCurrentRole(role);
           }
-        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        } else if (event === 'SIGNED_OUT') {
           dispatch(clearUser());
           setCurrentRole(null);
           router.push('/signin');
@@ -83,7 +111,7 @@ export function useSupabaseAuth() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [dispatch, router]);
+  }, [dispatch, router, isAuthenticated, user?.role, loading, isInitialized]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -170,9 +198,9 @@ export function useSupabaseAuth() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      
+
       if (error) throw error;
-      
+
       return { success: true };
     } catch (error: any) {
       console.error('Error resetting password:', error);
@@ -188,5 +216,6 @@ export function useSupabaseAuth() {
     signOut,
     resetPassword,
     isInitialized,
+    validateSession,
   };
 }

@@ -16,7 +16,6 @@ export default function Home() {
       const userRole = authUser?.userRole?.toLowerCase();
 
       if (userRole === 'manager') {
-        console.log('Home page - redirecting manager to properties');
         router.push('/managers/properties');
       } else {
         setShouldRender(true);

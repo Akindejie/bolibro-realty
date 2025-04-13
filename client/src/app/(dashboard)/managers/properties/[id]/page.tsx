@@ -38,18 +38,6 @@ const PropertyPage = () => {
   // Add enhanced debugging for image issues
   React.useEffect(() => {
     if (property) {
-      console.log('Property data received:', property);
-      console.log('Property ID:', property.id);
-      console.log('Property images (images):', property.images);
-      console.log('Property images (photoUrls):', property.photoUrls);
-      console.log(
-        'Images array type:',
-        Array.isArray(property.images) ? 'Array' : typeof property.images
-      );
-      console.log(
-        'photoUrls array type:',
-        Array.isArray(property.photoUrls) ? 'Array' : typeof property.photoUrls
-      );
 
       // Check which image property is defined and has values
       const imageArrays = [
@@ -58,17 +46,8 @@ const PropertyPage = () => {
         { name: 'photos', array: (property as any).photos },
       ];
 
-      console.log('Image property analysis:');
       imageArrays.forEach(({ name, array }) => {
-        console.log(
-          `- ${name}: ${
-            array
-              ? `defined (${Array.isArray(array) ? 'is array' : 'not array'})`
-              : 'undefined'
-          }`
-        );
         if (array && Array.isArray(array)) {
-          console.log(`  - length: ${array.length}`);
           if (array.length > 0) {
             console.log(`  - first image: ${array[0]}`);
             console.log(`  - all images:`, JSON.stringify(array));

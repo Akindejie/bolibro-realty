@@ -74,8 +74,6 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
 
   useEffect(() => {
     if (property) {
-      console.log('Populating form with property data:', property);
-
       // Convert array values to strings for select fields
       const amenitiesString = Array.isArray(property.amenities)
         ? property.amenities.join(',')
@@ -181,9 +179,6 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
       return;
     }
 
-    // Log the complete form data for debugging
-    console.log('Complete form data:', JSON.stringify(data, null, 2));
-
     try {
       const formData = new FormData();
 
@@ -194,9 +189,6 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
       const highlights = data.highlights
         ? data.highlights.split(',').filter(Boolean)
         : [];
-
-      console.log('Processed arrays - amenities:', amenities);
-      console.log('Processed arrays - highlights:', highlights);
 
       // Add all form fields to formData
       Object.entries(data).forEach(([key, value]) => {
@@ -219,13 +211,9 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
           );
           formData.append(key, JSON.stringify(amenities));
         } else if (key === 'highlights') {
-          console.log(
-            `Adding highlights as JSON string: ${JSON.stringify(highlights)}`
-          );
           formData.append(key, JSON.stringify(highlights));
         } else if (key !== 'photos' && value !== null && value !== undefined) {
           // Skip photos as they're handled separately
-          console.log(`Adding ${key}: ${String(value)}`);
           formData.append(key, String(value));
         }
       });
