@@ -2,23 +2,41 @@ import { Request, Response } from 'express';
 import prisma, { withRetry } from '../utils/database';
 // @ts-ignore
 const { wktToGeoJSON } = require('@terraformer/wkt');
+import { AuthenticatedRequest } from '../types/authenticatedRequest';
+
+/**
+ * This application now uses Supabase for authentication.
+ * The database schema has been updated to use supabaseId column names
+ * for consistency with the authentication system.
+ */
 
 export const getManager = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
   try {
-    const { cognitoId } = req.params;
-    console.log(`Fetching manager with ID: ${cognitoId}`);
+    const { userId } = req.params;
+    const authUserId = req.user?.id;
+    const userRole = req.user?.role;
+
+    console.log(
+      `Request to fetch manager with ID: ${userId} by user ${authUserId} with role ${userRole}`
+    );
+
+    // Security check: Managers can only access their own data
+    if (userRole !== 'manager' || authUserId !== userId) {
+      res.status(403).json({ message: 'Unauthorized access' });
+      return;
+    }
 
     try {
-      // Use the withRetry utility for database operations
+      // Using supabaseId to identify the manager
       const manager = await withRetry(
         () =>
           prisma.manager.findUnique({
-            where: { cognitoId },
+            where: { supabaseId: userId },
           }),
-        `Fetch manager ${cognitoId}`
+        `Fetch manager ${userId}`
       );
 
       if (manager) {
@@ -52,11 +70,31 @@ export const createManager = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { cognitoId, name, email, phoneNumber } = req.body;
+    // authId is the Supabase user ID that will be stored in the supabaseId column
+    const { supabaseId: authId, name, email, phoneNumber } = req.body;
+
+    // Validation
+    if (!authId || !name || !email) {
+      res.status(400).json({
+        message: 'Missing required fields',
+        required: ['supabaseId', 'name', 'email'],
+      });
+      return;
+    }
+
+    // Check if manager already exists
+    const existingManager = await prisma.manager.findUnique({
+      where: { supabaseId: authId },
+    });
+
+    if (existingManager) {
+      res.status(409).json({ message: 'Manager already exists with this ID' });
+      return;
+    }
 
     const manager = await prisma.manager.create({
       data: {
-        cognitoId,
+        supabaseId: authId, // Store Supabase user ID in supabaseId column
         name,
         email,
         phoneNumber,
@@ -65,6 +103,7 @@ export const createManager = async (
 
     res.status(201).json(manager);
   } catch (error: any) {
+    console.error('Error creating manager:', error);
     res
       .status(500)
       .json({ message: `Error creating manager: ${error.message}` });
@@ -72,24 +111,49 @@ export const createManager = async (
 };
 
 export const updateManager = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
   try {
-    const { cognitoId } = req.params;
+    const { userId } = req.params;
     const { name, email, phoneNumber } = req.body;
+    const authUserId = req.user?.id;
+    const userRole = req.user?.role;
 
-    const updateManager = await prisma.manager.update({
-      where: { cognitoId },
-      data: {
-        name,
-        email,
-        phoneNumber,
-      },
-    });
+    // Security check: Managers can only update their own data
+    if (userRole !== 'manager' || authUserId !== userId) {
+      res.status(403).json({ message: 'Unauthorized access' });
+      return;
+    }
 
-    res.json(updateManager);
+    // Validation
+    if (!name && !email && !phoneNumber) {
+      res.status(400).json({ message: 'No fields to update provided' });
+      return;
+    }
+
+    try {
+      const updateData: any = {};
+      if (name) updateData.name = name;
+      if (email) updateData.email = email;
+      if (phoneNumber) updateData.phoneNumber = phoneNumber;
+
+      // Using supabaseId to identify the manager
+      const updateManager = await prisma.manager.update({
+        where: { supabaseId: userId },
+        data: updateData,
+      });
+
+      res.json(updateManager);
+    } catch (dbError: any) {
+      if (dbError.code === 'P2025') {
+        res.status(404).json({ message: 'Manager not found' });
+        return;
+      }
+      throw dbError;
+    }
   } catch (error: any) {
+    console.error('Error updating manager:', error);
     res
       .status(500)
       .json({ message: `Error updating manager: ${error.message}` });
@@ -97,29 +161,38 @@ export const updateManager = async (
 };
 
 export const getManagerProperties = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
   try {
-    const { cognitoId } = req.params;
-    console.log(`Getting properties for manager: ${cognitoId}`);
+    const { userId } = req.params;
+    const authUserId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Security check: Managers can only access their own properties
+    if (userRole !== 'manager' || authUserId !== userId) {
+      res.status(403).json({ message: 'Unauthorized access' });
+      return;
+    }
+
+    console.log(`Getting properties for manager: ${userId}`);
 
     let properties;
     try {
-      // Use the withRetry utility for database operations
+      // Using managerId to find properties
       properties = await withRetry(
         () =>
           prisma.property.findMany({
-            where: { managerCognitoId: cognitoId },
+            where: { managerId: userId },
             include: {
               location: true,
             },
           }),
-        `Fetch properties for manager ${cognitoId}`
+        `Fetch properties for manager ${userId}`
       );
 
       console.log(
-        `Found ${properties.length} properties for manager ${cognitoId}`
+        `Found ${properties.length} properties for manager ${userId}`
       );
     } catch (dbError: any) {
       console.error(
@@ -137,69 +210,16 @@ export const getManagerProperties = async (
       throw dbError; // Re-throw for the outer catch block
     }
 
-    try {
-      const propertiesWithFormattedLocation = await Promise.all(
-        properties.map(async (property) => {
-          try {
-            // Ensure images and photoUrls are always arrays
-            const photoUrls = Array.isArray(property.photoUrls)
-              ? property.photoUrls
-              : [];
-            const images = Array.isArray(property.images)
-              ? property.images
-              : [];
+    // Convert location coordinates to correct format
+    const formattedProperties = await Promise.all(
+      properties.map(async (property) => {
+        try {
+          const coordinates: { coordinates: string }[] =
+            await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
 
-            // Get coordinates safely
-            let longitude = 0;
-            let latitude = 0;
-
-            try {
-              // Use the withRetry utility for the raw query
-              const coordinates: { coordinates: string }[] = await withRetry(
-                () =>
-                  prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`,
-                `Fetch coordinates for location ${property.location.id}`
-              );
-
-              if (coordinates && coordinates[0] && coordinates[0].coordinates) {
-                const geoJSON = wktToGeoJSON(coordinates[0].coordinates);
-                if (geoJSON && geoJSON.coordinates) {
-                  longitude = geoJSON.coordinates[0] || 0;
-                  latitude = geoJSON.coordinates[1] || 0;
-                }
-              }
-            } catch (coordError) {
-              console.error(
-                `Error converting coordinates for property ${property.id}:`,
-                coordError
-              );
-              // Use default coordinates (0,0) if conversion fails
-            }
-
+          if (!coordinates[0]?.coordinates) {
             return {
               ...property,
-              photoUrls,
-              images,
-              location: {
-                ...property.location,
-                coordinates: {
-                  longitude,
-                  latitude,
-                },
-              },
-            };
-          } catch (propertyError) {
-            console.error(
-              `Error processing property ${property.id}:`,
-              propertyError
-            );
-            // Return property with minimal location data to prevent entire query failure
-            return {
-              ...property,
-              photoUrls: Array.isArray(property.photoUrls)
-                ? property.photoUrls
-                : [],
-              images: Array.isArray(property.images) ? property.images : [],
               location: {
                 ...property.location,
                 coordinates: {
@@ -209,26 +229,104 @@ export const getManagerProperties = async (
               },
             };
           }
-        })
+
+          const geoJSON: any = wktToGeoJSON(coordinates[0].coordinates);
+          const longitude = geoJSON.coordinates[0];
+          const latitude = geoJSON.coordinates[1];
+
+          return {
+            ...property,
+            location: {
+              ...property.location,
+              coordinates: {
+                longitude,
+                latitude,
+              },
+            },
+          };
+        } catch (err) {
+          console.error(
+            `Error converting coordinates for property ${property.id}:`,
+            err
+          );
+          return {
+            ...property,
+            location: {
+              ...property.location,
+              coordinates: {
+                longitude: 0,
+                latitude: 0,
+              },
+            },
+          };
+        }
+      })
+    );
+
+    res.status(200).json(formattedProperties);
+  } catch (error: any) {
+    console.error('Error retrieving properties:', error);
+    res
+      .status(500)
+      .json({ message: `Error retrieving properties: ${error.message}` });
+  }
+};
+
+/**
+ * Special endpoint to handle the /me request
+ * This is used by the client when the user's ID is in the token
+ * but we need to reference it as 'me' in the URL
+ */
+export const getManagerProfile = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const authUserId = req.user?.id;
+    const userRole = req.user?.role;
+
+    console.log(
+      `Request to fetch manager profile for authenticated user: ${authUserId} with role ${userRole}`
+    );
+
+    // Security check: Only managers can access this endpoint
+    if (userRole !== 'manager') {
+      res.status(403).json({ message: 'Unauthorized access' });
+      return;
+    }
+
+    try {
+      // Using supabaseId to identify the manager
+      const manager = await withRetry(
+        () =>
+          prisma.manager.findUnique({
+            where: { supabaseId: authUserId },
+          }),
+        `Fetch manager profile for ${authUserId}`
       );
 
-      res.json(propertiesWithFormattedLocation);
-    } catch (processingError) {
-      console.error('Error processing property data:', processingError);
-      // Return raw properties as fallback with minimal formatting
-      const safeProperties = properties.map((p) => ({
-        ...p,
-        photoUrls: Array.isArray(p.photoUrls) ? p.photoUrls : [],
-        images: Array.isArray(p.images) ? p.images : [],
-        location: p.location || { coordinates: { longitude: 0, latitude: 0 } },
-      }));
-      res.json(safeProperties);
+      if (manager) {
+        res.json(manager);
+      } else {
+        res.status(404).json({ message: 'Manager not found' });
+      }
+    } catch (dbError: any) {
+      console.error(`Database error when fetching manager: ${dbError.message}`);
+
+      if (dbError.message?.includes("Can't reach database server")) {
+        res.status(503).json({
+          message: 'Database connection error. Please try again later.',
+          details: 'Unable to connect to the database server',
+        });
+        return;
+      }
+
+      throw dbError; // Re-throw for the outer catch block
     }
-  } catch (err: any) {
-    console.error('Error retrieving manager properties:', err);
-    res.status(500).json({
-      message: `Error retrieving manager properties: ${err.message}`,
-      error: err.code || 'unknown_error',
-    });
+  } catch (error: any) {
+    console.error(`Error in getManagerProfile:`, error);
+    res
+      .status(500)
+      .json({ message: `Error retrieving manager profile: ${error.message}` });
   }
 };

@@ -2,27 +2,27 @@
 
 import SettingsForm from '@/components/SettingsForm';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import {
-  useGetAuthUserQuery,
-  useUpdateManagerSettingsMutation,
-} from '@/state/api';
+import { useUpdateManagerSettingsMutation } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import React from 'react';
 
 const ManagerSettings = () => {
-  const { data: authUser, isLoading } = useGetAuthUserQuery();
+  const { user, isAuthenticated, loading } = useAppSelector(
+    (state) => state.user
+  );
   const [updateManager] = useUpdateManagerSettingsMutation();
 
-  if (isLoading) return <>Loading...</>;
+  if (loading) return <>Loading...</>;
 
   const initialData = {
-    name: authUser?.userInfo.name,
-    email: authUser?.userInfo.email,
-    phoneNumber: authUser?.userInfo.phoneNumber,
+    name: user?.name,
+    email: user?.email,
+    phoneNumber: user?.phoneNumber,
   };
 
   const handleSubmit = async (data: typeof initialData) => {
     await updateManager({
-      cognitoId: authUser?.cognitoInfo?.userId,
+      id: user?.id,
       ...data,
     });
   };

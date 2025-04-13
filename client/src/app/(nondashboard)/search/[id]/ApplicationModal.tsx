@@ -8,7 +8,8 @@ import {
 } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
 import { ApplicationFormData, applicationSchema } from '@/lib/schemas';
-import { useCreateApplicationMutation, useGetAuthUserQuery } from '@/state/api';
+import { useCreateApplicationMutation } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React from 'react';
 import { useForm } from 'react-hook-form';
@@ -19,7 +20,7 @@ const ApplicationModal = ({
   propertyId,
 }: ApplicationModalProps) => {
   const [createApplication] = useCreateApplicationMutation();
-  const { data: authUser } = useGetAuthUserQuery();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
 
   // i want to add id upload to the application later
   const form = useForm<ApplicationFormData>({
@@ -33,7 +34,7 @@ const ApplicationModal = ({
   });
 
   const onSubmit = async (data: ApplicationFormData) => {
-    if (!authUser || authUser.userRole !== 'tenant') {
+    if (!isAuthenticated || !user || user?.role !== 'tenant') {
       console.error(
         'You must be logged in as a tenant to submit an application'
       );
@@ -45,7 +46,7 @@ const ApplicationModal = ({
       applicationDate: new Date().toISOString(),
       status: 'Pending',
       propertyId: propertyId,
-      tenantCognitoId: authUser.cognitoInfo.userId,
+      tenantId: user.id,
     });
     onClose();
   };

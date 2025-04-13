@@ -12,13 +12,10 @@ import React from 'react';
 import CardCompact from '@/components/CardCompact';
 
 const Listings = () => {
-  const { data: authUser } = useGetAuthUserQuery();
-  const { data: tenant } = useGetTenantQuery(
-    authUser?.cognitoInfo?.userId || '',
-    {
-      skip: !authUser?.cognitoInfo?.userId,
-    }
-  );
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
+  const { data: tenant } = useGetTenantQuery(user?.id || '', {
+    skip: !isAuthenticated || !user?.id,
+  });
   const [addFavorite] = useAddFavoritePropertyMutation();
   const [removeFavorite] = useRemoveFavoritePropertyMutation();
   const viewMode = useAppSelector((state) => state.global.viewMode);
@@ -31,7 +28,7 @@ const Listings = () => {
   } = useGetPropertiesQuery(filters);
 
   const handleFavoriteToggle = async (propertyId: number) => {
-    if (!authUser) return;
+    if (!isAuthenticated || !user || !user.id) return;
 
     const isFavorite = tenant?.favorites?.some(
       (fav: Property) => fav.id === propertyId
@@ -39,12 +36,12 @@ const Listings = () => {
 
     if (isFavorite) {
       await removeFavorite({
-        cognitoId: authUser.cognitoInfo.userId,
+        id: user.id,
         propertyId,
       });
     } else {
       await addFavorite({
-        cognitoId: authUser.cognitoInfo.userId,
+        id: user.id,
         propertyId,
       });
     }
@@ -58,7 +55,9 @@ const Listings = () => {
       <h3 className="text-sm px-4 font-bold">
         {properties.length}{' '}
         <span className="text-gray-700 font-normal">
-          {filters.location ? `Places in ${filters.location}` : 'Places available'}
+          {filters.location
+            ? `Places in ${filters.location}`
+            : 'Places available'}
         </span>
       </h3>
       <div className="flex">
@@ -74,7 +73,7 @@ const Listings = () => {
                   ) || false
                 }
                 onFavoriteToggle={() => handleFavoriteToggle(property.id)}
-                showFavoriteButton={!!authUser}
+                showFavoriteButton={!!user}
                 propertyLink={`/search/${property.id}`}
               />
             ) : (
@@ -87,7 +86,7 @@ const Listings = () => {
                   ) || false
                 }
                 onFavoriteToggle={() => handleFavoriteToggle(property.id)}
-                showFavoriteButton={!!authUser}
+                showFavoriteButton={!!user}
                 propertyLink={`/search/${property.id}`}
               />
             )

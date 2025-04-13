@@ -12,11 +12,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  useGetAuthUserQuery,
   useGetLeasesQuery,
   useGetPaymentsQuery,
   useGetPropertyQuery,
 } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import { Lease, Payment, Property } from '@/types/prismaTypes';
 import {
   ArrowDownToLineIcon,
@@ -244,7 +244,7 @@ const BillingHistory = ({ payments }: { payments: Payment[] }) => {
 
 const Residence = () => {
   const { id } = useParams();
-  const { data: authUser } = useGetAuthUserQuery();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
   const {
     data: property,
     isLoading: propertyLoading,
@@ -252,8 +252,8 @@ const Residence = () => {
   } = useGetPropertyQuery(Number(id));
 
   const { data: leases, isLoading: leasesLoading } = useGetLeasesQuery(
-    parseInt(authUser?.cognitoInfo?.userId || '0'),
-    { skip: !authUser?.cognitoInfo?.userId }
+    parseInt(user?.id || '0'),
+    { skip: !isAuthenticated || !user?.id }
   );
   const { data: payments, isLoading: paymentsLoading } = useGetPaymentsQuery(
     leases?.[0]?.id || 0,

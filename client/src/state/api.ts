@@ -8,18 +8,22 @@ import {
   Tenant,
 } from '@/types/prismaTypes';
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
+import { supabase } from '@/lib/supabase';
 import { FiltersState } from '.';
 import { toast } from 'react-hot-toast';
+import { setUser } from '@/state/userSlice';
+
+// Define API URL from environment variable
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const api = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
     prepareHeaders: async (headers) => {
-      const session = await fetchAuthSession();
-      const { idToken } = session.tokens ?? {};
-      if (idToken) {
-        headers.set('Authorization', `Bearer ${idToken}`);
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
       }
       return headers;
     },
@@ -38,15 +42,21 @@ export const api = createApi({
     getAuthUser: build.query<User, void>({
       queryFn: async (_, _queryApi, _extraoptions, fetchWithBQ) => {
         try {
-          const session = await fetchAuthSession();
-          const { idToken } = session.tokens ?? {};
-          const user = await getCurrentUser();
-          const userRole = idToken?.payload['custom:role'] as string;
+          const { data: sessionData } = await supabase.auth.getSession();
+          const { data: userData } = await supabase.auth.getUser();
+
+          if (!sessionData.session || !userData.user) {
+            return { error: 'No authenticated user found' };
+          }
+
+          const user = userData.user;
+          const userRole = user.user_metadata?.role as string;
+          const userId = user.id;
 
           const endpoint =
             userRole === 'manager'
-              ? `/managers/${user.userId}`
-              : `/tenants/${user.userId}`;
+              ? `/managers/${userId}`
+              : `/tenants/${userId}`;
 
           let userDetailsResponse = await fetchWithBQ(endpoint);
 
@@ -57,20 +67,74 @@ export const api = createApi({
           ) {
             userDetailsResponse = await createNewUserInDatabase(
               user,
-              idToken,
+              sessionData.session.access_token,
               userRole,
               fetchWithBQ
             );
           }
+
           return {
             data: {
-              cognitoInfo: { ...user },
+              supabaseUser: user,
               userInfo: userDetailsResponse.data as Tenant | Manager,
               userRole,
             },
           };
         } catch (error: any) {
           return { error: error.message || 'Could not fetch user data' };
+        }
+      },
+    }),
+
+    // User authentication endpoints
+    getUserByRole: build.query({
+      queryFn: async (userRole, { dispatch }, _extraOptions, fetchWithBQ) => {
+        try {
+          const { data } = await supabase.auth.getSession();
+
+          if (!data.session) {
+            return { data: null };
+          }
+
+          const user = data.session.user;
+          const accessToken = data.session.access_token;
+
+          // Try fetching the appropriate endpoint based on user role
+          const endpoint =
+            userRole === 'manager' ? '/managers/me' : '/tenants/me';
+
+          const result = await fetchWithBQ(endpoint);
+
+          // If the user doesn't exist in our database, create them
+          if (result.error?.status === 404) {
+            try {
+              console.log('Creating new user in database with role:', userRole);
+              await createNewUserInDatabase(
+                user,
+                accessToken,
+                userRole,
+                fetchWithBQ
+              );
+
+              // Try fetching the user again after creation
+              const retryResult = await fetchWithBQ(endpoint);
+              if (retryResult.data) {
+                dispatch(setUser({ ...retryResult.data, role: userRole }));
+                return { data: retryResult.data };
+              }
+            } catch (createError) {
+              console.error('Error creating user:', createError);
+              return { error: { status: 500, data: 'Failed to create user' } };
+            }
+          } else if (result.data) {
+            dispatch(setUser({ ...result.data, role: userRole }));
+            return { data: result.data };
+          }
+
+          return { data: null };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return { error: { status: 500, data: 'Authentication error' } };
         }
       },
     }),
@@ -139,7 +203,7 @@ export const api = createApi({
 
     // tenant related endpoints
     getTenant: build.query<Tenant, string>({
-      query: (cognitoId) => `tenants/${cognitoId}`,
+      query: (id) => `tenants/${id}`,
       providesTags: (result) => [{ type: 'Tenants', id: result?.id }],
       async onQueryStarted(_, { queryFulfilled }) {
         await withToast(queryFulfilled, {
@@ -149,7 +213,7 @@ export const api = createApi({
     }),
 
     getCurrentResidences: build.query<Property[], string>({
-      query: (cognitoId) => `tenants/${cognitoId}/current-residences`,
+      query: (id) => `tenants/${id}/current-residences`,
       providesTags: (result) =>
         result
           ? [
@@ -166,10 +230,10 @@ export const api = createApi({
 
     updateTenantSettings: build.mutation<
       Tenant,
-      { cognitoId: string } & Partial<Tenant>
+      { id: string } & Partial<Tenant>
     >({
-      query: ({ cognitoId, ...updatedTenant }) => ({
-        url: `tenants/${cognitoId}`,
+      query: ({ id, ...updatedTenant }) => ({
+        url: `tenants/${id}`,
         method: 'PUT',
         body: updatedTenant,
       }),
@@ -184,10 +248,10 @@ export const api = createApi({
 
     addFavoriteProperty: build.mutation<
       Tenant,
-      { cognitoId: string; propertyId: number }
+      { id: string; propertyId: number }
     >({
-      query: ({ cognitoId, propertyId }) => ({
-        url: `tenants/${cognitoId}/favorites/${propertyId}`,
+      query: ({ id, propertyId }) => ({
+        url: `tenants/${id}/favorites/${propertyId}`,
         method: 'POST',
       }),
       invalidatesTags: (result) => [
@@ -204,10 +268,10 @@ export const api = createApi({
 
     removeFavoriteProperty: build.mutation<
       Tenant,
-      { cognitoId: string; propertyId: number }
+      { id: string; propertyId: number }
     >({
-      query: ({ cognitoId, propertyId }) => ({
-        url: `tenants/${cognitoId}/favorites/${propertyId}`,
+      query: ({ id, propertyId }) => ({
+        url: `tenants/${id}/favorites/${propertyId}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result) => [
@@ -224,7 +288,7 @@ export const api = createApi({
 
     // manager related endpoints
     getManagerProperties: build.query<Property[], string>({
-      query: (cognitoId) => `managers/${cognitoId}/properties`,
+      query: (id) => `managers/${id}/properties`,
       providesTags: (result) =>
         result
           ? [
@@ -241,10 +305,10 @@ export const api = createApi({
 
     updateManagerSettings: build.mutation<
       Manager,
-      { cognitoId: string } & Partial<Manager>
+      { id: string } & Partial<Manager>
     >({
-      query: ({ cognitoId, ...updatedManager }) => ({
-        url: `managers/${cognitoId}`,
+      query: ({ id, ...updatedManager }) => ({
+        url: `managers/${id}`,
         method: 'PUT',
         body: updatedManager,
       }),
@@ -258,17 +322,31 @@ export const api = createApi({
     }),
 
     createProperty: build.mutation<Property, FormData>({
-      query: (data) => ({
-        url: 'properties',
-        method: 'POST',
-        body: data,
-      }),
+      query: (data) => {
+        // Debug the request
+        console.log('===== CREATE PROPERTY API CALL =====');
+        console.log('FormData entries:');
+        for (const [key, value] of data.entries()) {
+          console.log(`${key}: ${typeof value === 'string' ? value : '[File or complex data]'}`);
+        }
+        
+        return {
+          url: 'properties',
+          method: 'POST',
+          body: data,
+        };
+      },
       invalidatesTags: [{ type: 'Properties', id: 'LIST' }],
       async onQueryStarted(_, { queryFulfilled }) {
-        await withToast(queryFulfilled, {
-          success: 'Property created successfully!',
-          error: 'Failed to create property.',
-        });
+        try {
+          console.log('Property creation started');
+          const result = await queryFulfilled;
+          console.log('Property creation succeeded:', result);
+          toast.success('Property created successfully!');
+        } catch (error) {
+          console.error('Property creation failed:', error);
+          toast.error('Failed to create property.');
+        }
       },
     }),
 
@@ -589,6 +667,7 @@ export const api = createApi({
 
 export const {
   useGetAuthUserQuery,
+  useGetUserByRoleQuery,
   useUpdateTenantSettingsMutation,
   useUpdateManagerSettingsMutation,
   useGetPropertiesQuery,

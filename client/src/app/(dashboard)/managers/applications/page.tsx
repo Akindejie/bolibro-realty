@@ -7,15 +7,15 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useGetApplicationsQuery,
-  useGetAuthUserQuery,
   useUpdateApplicationStatusMutation,
 } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import { CircleCheckBig, Download, File, Hospital } from 'lucide-react';
 import Link from 'next/link';
 import React, { useState } from 'react';
 
 const Applications = () => {
-  const { data: authUser } = useGetAuthUserQuery();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
   const [activeTab, setActiveTab] = useState('all');
 
   const {
@@ -24,11 +24,11 @@ const Applications = () => {
     isError,
   } = useGetApplicationsQuery(
     {
-      userId: authUser?.cognitoInfo?.userId,
+      userId: user?.id,
       userType: 'manager',
     },
     {
-      skip: !authUser?.cognitoInfo?.userId,
+      skip: !isAuthenticated || !user?.id,
     }
   );
   const [updateApplicationStatus] = useUpdateApplicationStatusMutation();

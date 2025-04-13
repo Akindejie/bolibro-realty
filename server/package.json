@@ -24,7 +24,6 @@
     "@prisma/client": "^6.6.0",
     "@supabase/supabase-js": "^2.49.4",
     "@terraformer/wkt": "^2.2.1",
-    "aws-jwt-verify": "^4.0.0",
     "axios": "^1.8.4",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",

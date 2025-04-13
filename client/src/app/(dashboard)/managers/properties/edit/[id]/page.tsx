@@ -11,10 +11,10 @@ import { PropertyEditFormData, propertyEditSchema } from '@/lib/schemas';
 import {
   useGetPropertyQuery,
   useUpdatePropertyMutation,
-  useGetAuthUserQuery,
   useUploadPropertyImagesMutation,
   useUpdatePropertyImagesMutation,
 } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import { AmenityEnum, HighlightEnum, PropertyTypeEnum } from '@/lib/constants';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState, useEffect } from 'react';
@@ -37,7 +37,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
   const propertyId = parseInt(params.id);
   const [updateProperty, { isLoading: isSubmitting, isSuccess }] =
     useUpdatePropertyMutation();
-  const { data: authUser } = useGetAuthUserQuery();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
   const { data: property, isLoading } = useGetPropertyQuery(propertyId);
   const router = useRouter();
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
@@ -176,7 +176,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
   };
 
   const onSubmit = async (data: PropertyEditFormData) => {
-    if (!authUser?.cognitoInfo?.userId) {
+    if (!isAuthenticated || !user?.id) {
       toast.error('No manager ID found');
       return;
     }
@@ -231,8 +231,8 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
       });
 
       // Always include the manager ID
-      console.log(`Adding managerCognitoId: ${authUser.cognitoInfo.userId}`);
-      formData.append('managerCognitoId', authUser.cognitoInfo.userId);
+      console.log(`Adding managerId: ${user.id}`);
+      formData.append('managerId', user.id);
 
       // Log FormData entries for debugging
       console.log('FormData entries:');

@@ -3,24 +3,118 @@ import { PrismaClient } from '@prisma/client';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { uploadLeaseDocument as uploadLeaseDocumentToStorage } from '../utils/fileUpload';
 
-const prisma = new PrismaClient();
+// Define AuthenticatedRequest interface inline to avoid import issues
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    role: string;
+  };
+}
 
-export const getLeases = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const leases = await prisma.lease.findMany({
-      include: {
-        tenant: true,
-        property: true,
-      },
+// Define asyncHandler inline to avoid import issues
+const asyncHandler = (
+  fn: (req: AuthenticatedRequest, res: Response) => Promise<any>
+) => {
+  return (req: AuthenticatedRequest, res: Response) => {
+    Promise.resolve(fn(req, res)).catch((error) => {
+      console.error('Error in async handler:', error);
+      res.status(500).json({
+        message: 'Server error',
+        error: error.message,
+      });
     });
-    res.json(leases);
-  } catch (error: any) {
-    handlePrismaError(error, res, 'getLeases');
-  }
+  };
 };
 
+const prisma = new PrismaClient();
+
+export const getLeases = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id: userId, role: userRole } = req.user || {};
+
+    if (!userId || !userRole) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    try {
+      let leases;
+
+      if (userRole.toLowerCase() === 'manager') {
+        // Get all properties for the manager
+        const properties = await prisma.property.findMany({
+          where: {
+            managerId: userId,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        const propertyIds = properties.map((p) => p.id);
+
+        // Get leases for these properties
+        leases = await prisma.lease.findMany({
+          where: {
+            propertyId: {
+              in: propertyIds,
+            },
+          },
+          include: {
+            property: {
+              include: {
+                location: true,
+              },
+            },
+            tenant: true,
+            payments: true,
+          },
+        });
+      } else {
+        // Get leases for tenant
+        leases = await prisma.lease.findMany({
+          where: {
+            tenantId: userId,
+          },
+          include: {
+            property: {
+              include: {
+                location: true,
+              },
+            },
+            tenant: true,
+            payments: true,
+          },
+        });
+      }
+
+      // Check if user has permission to access the lease
+      for (const lease of leases) {
+        const hasPermission =
+          (userRole === 'manager' && lease.property.managerId === userId) ||
+          (userRole === 'tenant' && lease.tenantId === userId);
+
+        if (!hasPermission) {
+          res
+            .status(403)
+            .json({ message: 'Unauthorized access to this lease' });
+          return;
+        }
+      }
+
+      res.status(200).json(leases);
+    } catch (error) {
+      console.error('Error fetching leases:', error);
+      res.status(500).json({
+        message: 'Failed to fetch leases',
+        error: (error as Error).message,
+      });
+    }
+  }
+);
+
 export const getLeasePayments = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
   try {
@@ -38,7 +132,7 @@ export const getLeasePayments = async (
  * Upload a document for a lease (agreement, addendum, etc)
  */
 export const uploadLeaseDocument = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
   try {
@@ -49,7 +143,7 @@ export const uploadLeaseDocument = async (
     // Check if lease exists
     const lease = await prisma.lease.findUnique({
       where: { id: leaseId },
-      include: { property: { select: { managerCognitoId: true } } },
+      include: { property: { select: { managerId: true } } },
     });
 
     if (!lease) {
@@ -62,9 +156,9 @@ export const uploadLeaseDocument = async (
     const userRole = req.user?.role;
 
     const isAuthorizedManager =
-      userRole === 'manager' && lease.property.managerCognitoId === userId;
+      userRole === 'manager' && lease.property.managerId === userId;
     const isAuthorizedTenant =
-      userRole === 'tenant' && lease.tenantCognitoId === userId;
+      userRole === 'tenant' && lease.tenantId === userId;
 
     if (!isAuthorizedManager && !isAuthorizedTenant) {
       res.status(403).json({

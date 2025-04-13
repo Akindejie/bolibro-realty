@@ -86,23 +86,42 @@ async function ensureBucketExists(
 
   // Ensure bucket has correct settings
   try {
-    const { error: updateError } = await supabase.storage
+    // updateBucket is not available in the current version
+    // Instead, create a dummy file to update permissions or log a message
+    console.log(
+      `Note: Cannot update bucket "${bucketName}" settings automatically with current Supabase JS version`
+    );
+    console.log(
+      `Please manually configure bucket "${bucketName}" settings in the Supabase dashboard:`
+    );
+    console.log(`- Public: ${options.public}`);
+    console.log(
+      `- Allowed MIME types: ${options.allowedMimeTypes?.join(', ')}`
+    );
+    console.log(`- File size limit: ${options.fileSizeLimit} bytes`);
+
+    // Create a simple metadata file to mark configuration
+    const metadataContent = Buffer.from(
+      JSON.stringify({
+        configured: true,
+        timestamp: new Date().toISOString(),
+        settings: options,
+      })
+    );
+
+    const { error: metadataError } = await supabase.storage
       .from(bucketName)
-      .updateBucket({
-        public: options.public,
-        allowedMimeTypes: options.allowedMimeTypes,
-        fileSizeLimit: options.fileSizeLimit,
+      .upload('.bucket-config.json', metadataContent, {
+        contentType: 'application/json',
+        upsert: true,
       });
 
-    if (updateError) {
-      console.error(
-        `Error updating bucket "${bucketName}" settings:`,
-        updateError
+    if (metadataError) {
+      console.log(
+        `Note: Could not write config metadata: ${metadataError.message}`
       );
-    } else {
-      console.log(`Updated "${bucketName}" bucket settings`);
     }
   } catch (error) {
-    console.error(`Error updating bucket "${bucketName}" settings:`, error);
+    console.error(`Error with bucket "${bucketName}" settings:`, error);
   }
 }

@@ -19,6 +19,16 @@ const prisma = new PrismaClient();
 
 export const createProperty = async (req: Request, res: Response) => {
   try {
+    // Enhanced debugging
+    console.log('========== PROPERTY CREATION DEBUG START ==========');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Headers:', {
+      authorization: req.headers.authorization
+        ? 'Bearer token present'
+        : 'No Bearer token',
+      contentType: req.headers['content-type'],
+    });
+
     // Log user authentication details to diagnose authentication issues
     console.log('Authentication details:', {
       userId: req.user?.id,
@@ -29,8 +39,72 @@ export const createProperty = async (req: Request, res: Response) => {
         : 'None',
     });
 
+    // Log request information
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.originalUrl);
+    console.log('Body type:', typeof req.body);
+
+    // Log body content safely (handle both JSON and FormData)
+    if (typeof req.body === 'object') {
+      try {
+        const safeBody = { ...req.body };
+        // Don't log huge objects like file buffers
+        for (const key in safeBody) {
+          if (
+            Buffer.isBuffer(safeBody[key]) ||
+            (safeBody[key] &&
+              typeof safeBody[key] === 'object' &&
+              safeBody[key].length > 1000)
+          ) {
+            safeBody[key] = '[Large Buffer/Object]';
+          }
+        }
+        console.log('Request body:', safeBody);
+      } catch (e) {
+        console.log('Error logging body:', e);
+        console.log('Body keys:', Object.keys(req.body));
+      }
+    } else {
+      console.log('Request body is not an object. Type:', typeof req.body);
+    }
+
+    // Log files
+    const files = req.files;
+    let allFilesToProcess: Express.Multer.File[] = [];
+
+    if (files) {
+      if (Array.isArray(files)) {
+        console.log('Files is an array with length:', files.length);
+        allFilesToProcess = files;
+      } else if (typeof files === 'object') {
+        console.log('Files is an object with fields:', Object.keys(files));
+        // Handle fields structure ({ photos: [...], images: [...] })
+        if (files.photos && Array.isArray(files.photos)) {
+          allFilesToProcess = [...allFilesToProcess, ...files.photos];
+        }
+        if (files.images && Array.isArray(files.images)) {
+          allFilesToProcess = [...allFilesToProcess, ...files.images];
+        }
+      }
+    }
+
+    console.log('Total files to process:', allFilesToProcess.length);
+    console.log(
+      'Files details:',
+      allFilesToProcess.map((f) => ({
+        name: f.originalname,
+        size: f.size,
+        mimetype: f.mimetype,
+      }))
+    );
+
+    // Ensure we always have a name value (required by Prisma)
+    const propertyName =
+      req.body.name || `Property ${new Date().toLocaleString()}`;
+    console.log('Using property name:', propertyName);
+
+    // Extract data from the request
     const {
-      name,
       description,
       type,
       beds,
@@ -51,13 +125,14 @@ export const createProperty = async (req: Request, res: Response) => {
       squareFeet,
       securityDeposit,
       applicationFee,
+      cleaningFee,
       isPetsAllowed,
       isParkingIncluded,
     } = req.body;
 
     // Log incoming data for debugging
     console.log('Creating property with data:', {
-      name,
+      name: propertyName,
       type,
       beds,
       baths,
@@ -68,20 +143,36 @@ export const createProperty = async (req: Request, res: Response) => {
       securityDeposit,
       applicationFee,
       city,
-      managerId,
-      hasImages:
-        !!req.files && Array.isArray(req.files) && req.files.length > 0,
-      imageCount: req.files && Array.isArray(req.files) ? req.files.length : 0,
-      imagesFromJson: images
+      managerId: managerId || req.user?.id,
+      hasFiles: allFilesToProcess.length > 0,
+      fileCount: allFilesToProcess.length,
+      images: images
         ? typeof images === 'string'
           ? JSON.parse(images).length
-          : images.length
-        : 0,
-      amenities: typeof amenities === 'string' ? amenities : 'non-string',
-      highlights: typeof highlights === 'string' ? highlights : 'non-string',
+          : Array.isArray(images)
+          ? images.length
+          : 'unknown'
+        : 'none',
+      imagesType: typeof images,
       isPetsAllowed,
       isParkingIncluded,
     });
+
+    // Make sure managerId is set - use either from body or from auth
+    const effectiveManagerId = managerId || req.user?.id;
+
+    if (!effectiveManagerId) {
+      console.error(
+        'No manager ID found - either in request body or authentication'
+      );
+      res.status(400).json({ message: 'Manager ID is required' });
+      return;
+    }
+
+    const managerSupabaseId = req.body.supabaseId || effectiveManagerId;
+
+    console.log('Using manager ID:', effectiveManagerId);
+    console.log('Using manager Supabase ID:', managerSupabaseId);
 
     // Parse amenities - improved to handle both arrays, JSON strings, and single values
     let parsedAmenities = [];
@@ -179,7 +270,7 @@ export const createProperty = async (req: Request, res: Response) => {
     // Now create the property with the locationId
     const newProperty = await prisma.property.create({
       data: {
-        name,
+        name: propertyName,
         description: description || '',
         propertyType: propertyTypeNormalized as any,
         beds: parseInt(beds) || 1,
@@ -188,6 +279,7 @@ export const createProperty = async (req: Request, res: Response) => {
         pricePerMonth: parseFloat(pricePerMonth || price) || 0,
         securityDeposit: parseFloat(securityDeposit) || 500,
         applicationFee: parseFloat(applicationFee) || 100,
+        cleaningFee: parseFloat(cleaningFee) || 0,
         isPetsAllowed:
           isPetsAllowed === 'true' || isPetsAllowed === true ? true : false,
         isParkingIncluded:
@@ -197,7 +289,7 @@ export const createProperty = async (req: Request, res: Response) => {
         photoUrls: [],
         images: [],
         amenities: parsedAmenities || [],
-        highlights: parsedHighlights || [],
+        highlights: parsedHighlights.map((h: string) => h as any) || [],
         location: {
           connect: {
             id: locationId,
@@ -205,7 +297,7 @@ export const createProperty = async (req: Request, res: Response) => {
         },
         manager: {
           connect: {
-            cognitoId: req.user?.id || '',
+            supabaseId: managerSupabaseId,
           },
         },
       },
@@ -231,12 +323,12 @@ export const createProperty = async (req: Request, res: Response) => {
     });
 
     // Now process files uploaded through FormData
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      console.log(`Processing ${req.files.length} uploaded photos`);
+    if (allFilesToProcess.length > 0) {
+      console.log(`Processing ${allFilesToProcess.length} uploaded photos`);
 
       // Now upload the images using the property ID for folder organization
       console.log(`Uploading images to property-${newProperty.id} folder`);
-      const uploadPromises = req.files.map((file) =>
+      const uploadPromises = allFilesToProcess.map((file) =>
         uploadPropertyImageToFolder(file, newProperty.id)
       );
 
@@ -244,7 +336,7 @@ export const createProperty = async (req: Request, res: Response) => {
       const successfulUploads = uploadResults.filter((url) => url !== null);
 
       console.log(
-        `Successfully uploaded ${successfulUploads.length} of ${req.files.length} photos to property-${newProperty.id} folder`
+        `Successfully uploaded ${successfulUploads.length} of ${allFilesToProcess.length} photos to property-${newProperty.id} folder`
       );
 
       // Update the property with the image URLs
@@ -413,10 +505,10 @@ export const getProperties = async (
 
         whereConditions.push(
           Prisma.sql`ST_DWithin(
-            l.coordinates::geometry,
-            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
-            ${degrees}
-          )`
+          l.coordinates::geometry,
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
+          ${degrees}
+        )`
         );
       }
     }
@@ -532,389 +624,24 @@ export const getProperty = async (
   }
 };
 
-export const updateProperty = asyncHandler(
-  async (req: Request, res: Response) => {
-    try {
-      const propertyId = parseInt(req.params.id);
-      const managerCognitoId = req.user?.id;
-      const files = req.files as
-        | { [fieldname: string]: Express.Multer.File[] }
-        | undefined;
-      const { address, city, state, country, postalCode, ...propertyData } =
-        req.body;
-
-      console.log('Update property request:', {
-        propertyId,
-        managerCognitoId,
-        files: files?.photos?.length || 0,
-        requestBody: JSON.stringify(req.body, null, 2),
-      });
-
-      if (!managerCognitoId) {
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-      }
-
-      // First check if the property exists and belongs to the manager
-      const property = await prisma.property.findFirst({
-        where: {
-          id: propertyId,
-          managerCognitoId,
-        },
-        include: {
-          location: true,
-        },
-      });
-
-      if (!property) {
-        res.status(404).json({
-          message:
-            'Property not found or you do not have permission to update it',
-        });
-        return;
-      }
-
-      console.log('Found property:', {
-        id: property.id,
-        name: property.name,
-        amenities: property.amenities,
-        highlights: property.highlights,
-      });
-
-      // Get existing coordinates
-      const coordinates: { coordinates: string }[] =
-        await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
-
-      const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
-      const existingLongitude = geoJSON.coordinates[0];
-      const existingLatitude = geoJSON.coordinates[1];
-
-      // Handle file uploads
-      let newPhotoUrls: string[] = [];
-      if (files && files.photos && Array.isArray(files.photos)) {
-        console.log(
-          `Processing ${files.photos.length} new photos for property ${propertyId}`
-        );
-
-        // Use the property ID for folder organization
-        const uploadPromises = files.photos.map((photo) => {
-          return uploadPropertyImageToFolder(photo, propertyId);
-        });
-
-        const results = await Promise.all(uploadPromises);
-        newPhotoUrls = results.filter(Boolean) as string[];
-
-        console.log(
-          `Successfully uploaded ${newPhotoUrls.length} of ${files.photos.length} new photos to property-${propertyId} folder`
-        );
-      }
-
-      // Add new photos to existing ones
-      if (newPhotoUrls.length > 0) {
-        propertyData.photoUrls = [
-          ...(property.photoUrls || []),
-          ...newPhotoUrls,
-        ];
-      }
-
-      // Update location if address details are provided
-      if (address && city && state && country && postalCode) {
-        console.log('Updating location data with:', {
-          address,
-          city,
-          state,
-          country,
-          postalCode,
-        });
-        try {
-          // Get coordinates from address using OpenStreetMap
-          const geocodingUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
-            {
-              street: address,
-              city,
-              state,
-              country,
-              postalcode: postalCode,
-              format: 'json',
-              limit: '1',
-            }
-          ).toString()}`;
-
-          const geocodingResponse = await axios.get(geocodingUrl, {
-            headers: {
-              'User-Agent': 'Bolibro-Realty (bolibro623@gmail.com)',
-            },
-          });
-
-          const [longitude, latitude] =
-            geocodingResponse.data[0]?.lon && geocodingResponse.data[0]?.lat
-              ? [
-                  parseFloat(geocodingResponse.data[0]?.lon),
-                  parseFloat(geocodingResponse.data[0]?.lat),
-                ]
-              : [existingLongitude, existingLatitude];
-
-          console.log('Location coordinates:', { longitude, latitude });
-
-          // Update the location
-          await prisma.$queryRaw`
-            UPDATE "Location"
-            SET address = ${address}, 
-                city = ${city}, 
-                state = ${state}, 
-                country = ${country}, 
-                "postalCode" = ${postalCode},
-                coordinates = ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
-            WHERE id = ${property.location.id}
-          `;
-          console.log('Location updated successfully');
-        } catch (locationError) {
-          console.error('Error updating location:', locationError);
-          // Continue with other updates even if location update fails
-        }
-      }
-
-      // Handle amenities and highlights
-      let amenities = property.amenities || [];
-      let highlights = property.highlights || [];
-
-      // Log incoming values for debugging
-      console.log('Incoming amenities (raw):', propertyData.amenities);
-      console.log('Incoming amenities (type):', typeof propertyData.amenities);
-      console.log('Incoming highlights (raw):', propertyData.highlights);
-      console.log(
-        'Incoming highlights (type):',
-        typeof propertyData.highlights
-      );
-
-      // Try to parse amenities if provided
-      if (propertyData.amenities !== undefined) {
-        try {
-          if (typeof propertyData.amenities === 'string') {
-            // Try to parse as JSON first (this handles arrays sent as JSON strings)
-            try {
-              const parsedAmenities = JSON.parse(propertyData.amenities);
-              if (Array.isArray(parsedAmenities)) {
-                amenities = parsedAmenities;
-                console.log('Successfully parsed amenities from JSON string');
-              } else {
-                console.log(
-                  'Parsed amenities is not an array, using as single value'
-                );
-                amenities = [propertyData.amenities];
-              }
-            } catch (jsonError) {
-              // Not valid JSON, handle as comma-separated string
-              if (propertyData.amenities.includes(',')) {
-                amenities = propertyData.amenities.split(',').filter(Boolean);
-                console.log('Parsed amenities from comma-separated string');
-              } else if (propertyData.amenities.trim()) {
-                amenities = [propertyData.amenities.trim()];
-                console.log('Using amenities as single string value');
-              } else {
-                amenities = [];
-                console.log('Empty amenities string, using empty array');
-              }
-            }
-          } else if (Array.isArray(propertyData.amenities)) {
-            amenities = propertyData.amenities;
-            console.log('Using amenities directly as array');
-          }
-        } catch (e) {
-          console.error('Error parsing amenities:', e);
-          // Fallback to existing values
-          amenities = property.amenities || [];
-          console.log('Using existing amenities due to parsing error');
-        }
-      } else {
-        console.log('No amenities provided, keeping existing values');
-      }
-
-      // Try to parse highlights if provided
-      if (propertyData.highlights !== undefined) {
-        try {
-          if (typeof propertyData.highlights === 'string') {
-            // Try to parse as JSON first (this handles arrays sent as JSON strings)
-            try {
-              const parsedHighlights = JSON.parse(propertyData.highlights);
-              if (Array.isArray(parsedHighlights)) {
-                highlights = parsedHighlights;
-                console.log('Successfully parsed highlights from JSON string');
-              } else {
-                console.log(
-                  'Parsed highlights is not an array, using as single value'
-                );
-                highlights = [propertyData.highlights];
-              }
-            } catch (jsonError) {
-              // Not valid JSON, handle as comma-separated string
-              if (propertyData.highlights.includes(',')) {
-                highlights = propertyData.highlights.split(',').filter(Boolean);
-                console.log('Parsed highlights from comma-separated string');
-              } else if (propertyData.highlights.trim()) {
-                highlights = [propertyData.highlights.trim()];
-                console.log('Using highlights as single string value');
-              } else {
-                highlights = [];
-                console.log('Empty highlights string, using empty array');
-              }
-            }
-          } else if (Array.isArray(propertyData.highlights)) {
-            highlights = propertyData.highlights;
-            console.log('Using highlights directly as array');
-          }
-        } catch (e) {
-          console.error('Error parsing highlights:', e);
-          // Fallback to existing values
-          highlights = property.highlights || [];
-          console.log('Using existing highlights due to parsing error');
-        }
-      } else {
-        console.log('No highlights provided, keeping existing values');
-      }
-
-      // Log processed values
-      console.log('Processed amenities:', amenities);
-      console.log('Processed highlights:', highlights);
-
-      // Synchronize images and photoUrls fields to ensure consistency
-      const existingImages = property.images || [];
-      const existingPhotoUrls = property.photoUrls || [];
-
-      console.log('Existing image fields before sync:');
-      console.log(`- images: ${existingImages.length} items`);
-      console.log(`- photoUrls: ${existingPhotoUrls.length} items`);
-
-      // Combine both arrays and remove duplicates
-      const allImages = [
-        ...new Set([...existingImages, ...existingPhotoUrls, ...newPhotoUrls]),
-      ];
-      console.log(`Combined unique images: ${allImages.length} items`);
-
-      // Use the combined array for both fields
-      const syncedImages = allImages;
-      const syncedPhotoUrls = allImages;
-
-      console.log('Using synchronized image arrays for both fields');
-
-      // Prepare update data with type conversions
-      const updateData = {
-        name: propertyData.name || property.name,
-        description: propertyData.description || property.description,
-        photoUrls: syncedPhotoUrls,
-        images: syncedImages,
-        amenities,
-        highlights,
-        isPetsAllowed:
-          propertyData.isPetsAllowed === 'true' ||
-          propertyData.isPetsAllowed === true
-            ? true
-            : propertyData.isPetsAllowed === 'false' ||
-              propertyData.isPetsAllowed === false
-            ? false
-            : property.isPetsAllowed,
-        isParkingIncluded:
-          propertyData.isParkingIncluded === 'true' ||
-          propertyData.isParkingIncluded === true
-            ? true
-            : propertyData.isParkingIncluded === 'false' ||
-              propertyData.isParkingIncluded === false
-            ? false
-            : property.isParkingIncluded,
-        pricePerMonth: propertyData.pricePerMonth
-          ? parseFloat(propertyData.pricePerMonth)
-          : property.pricePerMonth,
-        securityDeposit: propertyData.securityDeposit
-          ? parseFloat(propertyData.securityDeposit)
-          : property.securityDeposit,
-        applicationFee: propertyData.applicationFee
-          ? parseFloat(propertyData.applicationFee)
-          : property.applicationFee,
-        beds: propertyData.beds ? parseInt(propertyData.beds) : property.beds,
-        baths: propertyData.baths
-          ? parseFloat(propertyData.baths)
-          : property.baths,
-        squareFeet: propertyData.squareFeet
-          ? parseInt(propertyData.squareFeet)
-          : property.squareFeet,
-        propertyType: propertyData.propertyType || property.propertyType,
-      };
-
-      console.log(
-        'Update data prepared:',
-        JSON.stringify(
-          {
-            ...updateData,
-            photoUrls: updateData.photoUrls?.length || 0,
-            images: updateData.images?.length || 0,
-            amenities: updateData.amenities,
-            highlights: updateData.highlights,
-          },
-          null,
-          2
-        )
-      );
-
-      // Update the property
-      try {
-        const updatedProperty = await prisma.property.update({
-          where: { id: Number(propertyId) },
-          data: updateData,
-          include: {
-            location: true,
-            manager: true,
-          },
-        });
-
-        // Format location coordinates
-        const updatedCoordinates: { coordinates: string }[] =
-          await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${updatedProperty.location.id}`;
-
-        const updatedGeoJSON: any = wktToGeoJSON(
-          updatedCoordinates[0]?.coordinates || ''
-        );
-        const updatedLongitude = updatedGeoJSON.coordinates[0];
-        const updatedLatitude = updatedGeoJSON.coordinates[1];
-
-        const propertyWithFormattedLocation = {
-          ...updatedProperty,
-          location: {
-            ...updatedProperty.location,
-            coordinates: {
-              longitude: updatedLongitude,
-              latitude: updatedLatitude,
-            },
-          },
-        };
-
-        console.log('Property updated successfully:', propertyId);
-        res.json(propertyWithFormattedLocation);
-      } catch (prismaError: any) {
-        console.error('Prisma error updating property:', prismaError);
-        res.status(400).json({
-          message: `Error updating property in database: ${prismaError.message}`,
-          details: prismaError.meta,
-        });
-      }
-    } catch (err: any) {
-      console.error('Error updating property:', err);
-      console.error('Error stack:', err.stack);
-      res
-        .status(500)
-        .json({ message: `Error updating property: ${err.message}` });
-    }
-  }
-);
-
-export const deleteProperty = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateProperty = async (req: Request, res: Response) => {
   try {
     const propertyId = parseInt(req.params.id);
-    const managerCognitoId = req.user?.id;
+    const managerId = req.user?.id;
+    const files = req.files as
+      | { [fieldname: string]: Express.Multer.File[] }
+      | undefined;
+    const { address, city, state, country, postalCode, ...propertyData } =
+      req.body;
 
-    if (!managerCognitoId) {
+    console.log('Update property request:', {
+      propertyId,
+      managerId,
+      files: files?.photos?.length || 0,
+      requestBody: JSON.stringify(req.body, null, 2),
+    });
+
+    if (!managerId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
@@ -923,7 +650,370 @@ export const deleteProperty = async (
     const property = await prisma.property.findFirst({
       where: {
         id: propertyId,
-        managerCognitoId,
+        managerId,
+      },
+      include: {
+        location: true,
+      },
+    });
+
+    if (!property) {
+      res.status(404).json({
+        message:
+          'Property not found or you do not have permission to update it',
+      });
+      return;
+    }
+
+    console.log('Found property:', {
+      id: property.id,
+      name: property.name,
+      amenities: property.amenities,
+      highlights: property.highlights,
+    });
+
+    // Get existing coordinates
+    const coordinates: { coordinates: string }[] =
+      await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
+
+    const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
+    const existingLongitude = geoJSON.coordinates[0];
+    const existingLatitude = geoJSON.coordinates[1];
+
+    // Handle file uploads
+    let newPhotoUrls: string[] = [];
+    if (files && files.photos && Array.isArray(files.photos)) {
+      console.log(
+        `Processing ${files.photos.length} new photos for property ${propertyId}`
+      );
+
+      // Use the property ID for folder organization
+      const uploadPromises = files.photos.map((photo) => {
+        return uploadPropertyImageToFolder(photo, propertyId);
+      });
+
+      const results = await Promise.all(uploadPromises);
+      newPhotoUrls = results.filter(Boolean) as string[];
+
+      console.log(
+        `Successfully uploaded ${newPhotoUrls.length} of ${files.photos.length} new photos to property-${propertyId} folder`
+      );
+    }
+
+    // Add new photos to existing ones
+    if (newPhotoUrls.length > 0) {
+      propertyData.photoUrls = [...(property.photoUrls || []), ...newPhotoUrls];
+    }
+
+    // Update location if address details are provided
+    if (address && city && state && country && postalCode) {
+      console.log('Updating location data with:', {
+        address,
+        city,
+        state,
+        country,
+        postalCode,
+      });
+      try {
+        // Get coordinates from address using OpenStreetMap
+        const geocodingUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams(
+          {
+            street: address,
+            city,
+            state,
+            country,
+            postalcode: postalCode,
+            format: 'json',
+            limit: '1',
+          }
+        ).toString()}`;
+
+        const geocodingResponse = await axios.get(geocodingUrl, {
+          headers: {
+            'User-Agent': 'Bolibro-Realty (bolibro623@gmail.com)',
+          },
+        });
+
+        const [longitude, latitude] =
+          geocodingResponse.data[0]?.lon && geocodingResponse.data[0]?.lat
+            ? [
+                parseFloat(geocodingResponse.data[0]?.lon),
+                parseFloat(geocodingResponse.data[0]?.lat),
+              ]
+            : [existingLongitude, existingLatitude];
+
+        console.log('Location coordinates:', { longitude, latitude });
+
+        // Update the location
+        await prisma.$queryRaw`
+          UPDATE "Location"
+          SET address = ${address}, 
+              city = ${city}, 
+              state = ${state}, 
+              country = ${country}, 
+              "postalCode" = ${postalCode},
+              coordinates = ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+          WHERE id = ${property.location.id}
+        `;
+        console.log('Location updated successfully');
+      } catch (locationError) {
+        console.error('Error updating location:', locationError);
+        // Continue with other updates even if location update fails
+      }
+    }
+
+    // Handle amenities and highlights
+    let amenities = property.amenities || [];
+    let highlights = property.highlights || [];
+
+    // Log incoming values for debugging
+    console.log('Incoming amenities (raw):', propertyData.amenities);
+    console.log('Incoming amenities (type):', typeof propertyData.amenities);
+    console.log('Incoming highlights (raw):', propertyData.highlights);
+    console.log('Incoming highlights (type):', typeof propertyData.highlights);
+
+    // Try to parse amenities if provided
+    if (propertyData.amenities !== undefined) {
+      try {
+        if (typeof propertyData.amenities === 'string') {
+          // Try to parse as JSON first (this handles arrays sent as JSON strings)
+          try {
+            const parsedAmenities = JSON.parse(propertyData.amenities);
+            if (Array.isArray(parsedAmenities)) {
+              amenities = parsedAmenities;
+              console.log('Successfully parsed amenities from JSON string');
+            } else {
+              console.log(
+                'Parsed amenities is not an array, using as single value'
+              );
+              amenities = [propertyData.amenities];
+            }
+          } catch (jsonError) {
+            // Not valid JSON, handle as comma-separated string
+            if (propertyData.amenities.includes(',')) {
+              amenities = propertyData.amenities.split(',').filter(Boolean);
+              console.log('Parsed amenities from comma-separated string');
+            } else if (propertyData.amenities.trim()) {
+              amenities = [propertyData.amenities.trim()];
+              console.log('Using amenities as single string value');
+            } else {
+              amenities = [];
+              console.log('Empty amenities string, using empty array');
+            }
+          }
+        } else if (Array.isArray(propertyData.amenities)) {
+          amenities = propertyData.amenities;
+          console.log('Using amenities directly as array');
+        }
+      } catch (e) {
+        console.error('Error parsing amenities:', e);
+        // Fallback to existing values
+        amenities = property.amenities || [];
+        console.log('Using existing amenities due to parsing error');
+      }
+    } else {
+      console.log('No amenities provided, keeping existing values');
+    }
+
+    // Try to parse highlights if provided
+    if (propertyData.highlights !== undefined) {
+      try {
+        if (typeof propertyData.highlights === 'string') {
+          // Try to parse as JSON first (this handles arrays sent as JSON strings)
+          try {
+            const parsedHighlights = JSON.parse(propertyData.highlights);
+            if (Array.isArray(parsedHighlights)) {
+              highlights = parsedHighlights;
+              console.log('Successfully parsed highlights from JSON string');
+            } else {
+              console.log(
+                'Parsed highlights is not an array, using as single value'
+              );
+              highlights = [propertyData.highlights];
+            }
+          } catch (jsonError) {
+            // Not valid JSON, handle as comma-separated string
+            if (propertyData.highlights.includes(',')) {
+              highlights = propertyData.highlights.split(',').filter(Boolean);
+              console.log('Parsed highlights from comma-separated string');
+            } else if (propertyData.highlights.trim()) {
+              highlights = [propertyData.highlights.trim()];
+              console.log('Using highlights as single string value');
+            } else {
+              highlights = [];
+              console.log('Empty highlights string, using empty array');
+            }
+          }
+        } else if (Array.isArray(propertyData.highlights)) {
+          highlights = propertyData.highlights;
+          console.log('Using highlights directly as array');
+        }
+      } catch (e) {
+        console.error('Error parsing highlights:', e);
+        // Fallback to existing values
+        highlights = property.highlights || [];
+        console.log('Using existing highlights due to parsing error');
+      }
+    } else {
+      console.log('No highlights provided, keeping existing values');
+    }
+
+    // Log processed values
+    console.log('Processed amenities:', amenities);
+    console.log('Processed highlights:', highlights);
+
+    // Synchronize images and photoUrls fields to ensure consistency
+    const existingImages = property.images || [];
+    const existingPhotoUrls = property.photoUrls || [];
+
+    console.log('Existing image fields before sync:');
+    console.log(`- images: ${existingImages.length} items`);
+    console.log(`- photoUrls: ${existingPhotoUrls.length} items`);
+
+    // Combine both arrays and remove duplicates
+    const allImages = [
+      ...new Set([...existingImages, ...existingPhotoUrls, ...newPhotoUrls]),
+    ];
+    console.log(`Combined unique images: ${allImages.length} items`);
+
+    // Use the combined array for both fields
+    const syncedImages = allImages;
+    const syncedPhotoUrls = allImages;
+
+    console.log('Using synchronized image arrays for both fields');
+
+    // Prepare update data with type conversions
+    const updateData = {
+      name: propertyData.name || property.name,
+      description: propertyData.description || property.description,
+      photoUrls: syncedPhotoUrls,
+      images: syncedImages,
+      amenities,
+      highlights,
+      isPetsAllowed:
+        propertyData.isPetsAllowed === 'true' ||
+        propertyData.isPetsAllowed === true
+          ? true
+          : propertyData.isPetsAllowed === 'false' ||
+            propertyData.isPetsAllowed === false
+          ? false
+          : property.isPetsAllowed,
+      isParkingIncluded:
+        propertyData.isParkingIncluded === 'true' ||
+        propertyData.isParkingIncluded === true
+          ? true
+          : propertyData.isParkingIncluded === 'false' ||
+            propertyData.isParkingIncluded === false
+          ? false
+          : property.isParkingIncluded,
+      pricePerMonth: propertyData.pricePerMonth
+        ? parseFloat(propertyData.pricePerMonth)
+        : property.pricePerMonth,
+      securityDeposit: propertyData.securityDeposit
+        ? parseFloat(propertyData.securityDeposit)
+        : property.securityDeposit,
+      applicationFee: propertyData.applicationFee
+        ? parseFloat(propertyData.applicationFee)
+        : property.applicationFee,
+      cleaningFee:
+        propertyData.cleaningFee !== undefined
+          ? parseFloat(propertyData.cleaningFee)
+          : property.cleaningFee !== undefined
+          ? property.cleaningFee
+          : 0,
+      beds: propertyData.beds ? parseInt(propertyData.beds) : property.beds,
+      baths: propertyData.baths
+        ? parseFloat(propertyData.baths)
+        : property.baths,
+      squareFeet: propertyData.squareFeet
+        ? parseInt(propertyData.squareFeet)
+        : property.squareFeet,
+      propertyType: propertyData.propertyType || property.propertyType,
+    };
+
+    console.log(
+      'Update data prepared:',
+      JSON.stringify(
+        {
+          ...updateData,
+          photoUrls: updateData.photoUrls?.length || 0,
+          images: updateData.images?.length || 0,
+          amenities: updateData.amenities,
+          highlights: updateData.highlights,
+        },
+        null,
+        2
+      )
+    );
+
+    // Update the property
+    try {
+      const updatedProperty = await prisma.property.update({
+        where: { id: Number(propertyId) },
+        data: updateData,
+        include: {
+          location: true,
+          manager: true,
+        },
+      });
+
+      // Format location coordinates
+      const updatedCoordinates: { coordinates: string }[] =
+        await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${updatedProperty.location.id}`;
+
+      const updatedGeoJSON: any = wktToGeoJSON(
+        updatedCoordinates[0]?.coordinates || ''
+      );
+      const updatedLongitude = updatedGeoJSON.coordinates[0];
+      const updatedLatitude = updatedGeoJSON.coordinates[1];
+
+      const propertyWithFormattedLocation = {
+        ...updatedProperty,
+        location: {
+          ...updatedProperty.location,
+          coordinates: {
+            longitude: updatedLongitude,
+            latitude: updatedLatitude,
+          },
+        },
+      };
+
+      console.log('Property updated successfully:', propertyId);
+      res.json(propertyWithFormattedLocation);
+    } catch (prismaError: any) {
+      console.error('Prisma error updating property:', prismaError);
+      res.status(400).json({
+        message: `Error updating property in database: ${prismaError.message}`,
+        details: prismaError.meta,
+      });
+    }
+  } catch (err: any) {
+    console.error('Error updating property:', err);
+    console.error('Error stack:', err.stack);
+    res
+      .status(500)
+      .json({ message: `Error updating property: ${err.message}` });
+  }
+};
+
+export const deleteProperty = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const propertyId = parseInt(req.params.id);
+    const managerId = req.user?.id;
+
+    if (!managerId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    // First check if the property exists and belongs to the manager
+    const property = await prisma.property.findFirst({
+      where: {
+        id: propertyId,
+        managerId,
       },
     });
 
@@ -975,9 +1065,9 @@ export const updatePropertyStatus = async (
   try {
     const propertyId = parseInt(req.params.id);
     const { status } = req.body;
-    const managerCognitoId = req.user?.id;
+    const managerId = req.user?.id;
 
-    if (!managerCognitoId) {
+    if (!managerId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
@@ -986,7 +1076,7 @@ export const updatePropertyStatus = async (
     const property = await prisma.property.findFirst({
       where: {
         id: propertyId,
-        managerCognitoId,
+        managerId,
       },
     });
 
@@ -1023,9 +1113,9 @@ export const updateBulkPropertyStatus = async (
 ): Promise<void> => {
   try {
     const { propertyIds, status } = req.body;
-    const managerCognitoId = req.user?.id;
+    const managerId = req.user?.id;
 
-    if (!managerCognitoId) {
+    if (!managerId) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
     }
@@ -1041,7 +1131,7 @@ export const updateBulkPropertyStatus = async (
         id: {
           in: propertyIds.map((id) => Number(id)),
         },
-        managerCognitoId,
+        managerId,
       },
     });
 
@@ -1083,7 +1173,7 @@ export const uploadPropertyImage = asyncHandler(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const propertyIdParam = req.params.id;
-      const { id: managerCognitoId } = req.user || {};
+      const { id: managerId } = req.user || {};
 
       // Check if this is a temporary ID for a new property
       const isTemporaryId = propertyIdParam.startsWith('new-');
@@ -1092,7 +1182,7 @@ export const uploadPropertyImage = asyncHandler(
         : Number(propertyIdParam);
 
       console.log(
-        `Starting image upload for property ${propertyId} by manager ${managerCognitoId} (Temporary ID: ${isTemporaryId})`
+        `Starting image upload for property ${propertyId} by manager ${managerId} (Temporary ID: ${isTemporaryId})`
       );
 
       // Validate Supabase configuration
@@ -1263,18 +1353,18 @@ export const uploadPropertyImage = asyncHandler(
           const property = await prisma.property.findFirst({
             where: {
               id: propertyId as number,
-              managerCognitoId,
+              managerId,
             },
             select: {
               id: true,
-              managerCognitoId: true,
+              managerId: true,
               images: true,
             },
           });
 
           if (!property) {
             console.log(
-              `Property ${propertyId} not found or not owned by manager ${managerCognitoId}`
+              `Property ${propertyId} not found or not owned by manager ${managerId}`
             );
             res.status(404).json({
               message:

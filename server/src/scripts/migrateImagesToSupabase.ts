@@ -42,7 +42,7 @@ const prisma = new PrismaClient();
 const IMAGE_BUCKET_NAME = 'Property Images'; // Use the exact name from your Supabase account
 
 // Function to download a file from URL
-async function downloadFile(url, outputPath) {
+async function downloadFile(url: string, outputPath: string) {
   try {
     console.log(`Downloading file from ${url}...`);
 
@@ -89,34 +89,40 @@ async function downloadFile(url, outputPath) {
         contentType,
         buffer,
       };
-    } catch (axiosError) {
-      console.error(`Axios error downloading ${url}:`, axiosError.message);
+    } catch (axiosError: unknown) {
+      console.error(
+        `Axios error downloading ${url}:`,
+        axiosError instanceof Error ? axiosError.message : String(axiosError)
+      );
       throw axiosError;
     }
-  } catch (error) {
-    console.error(`Failed to download file from ${url}:`, error.message);
+  } catch (error: unknown) {
+    console.error(
+      `Failed to download file from ${url}:`,
+      error instanceof Error ? error.message : String(error)
+    );
     return {
       success: false,
-      error,
+      error: {},
     };
   }
 }
 
 // Function to migrate a file to Supabase
-async function migrateFile(url, bucket, path) {
+async function migrateFile(url: string, bucket: string, path: string) {
   try {
     console.log(`Preparing to migrate file from ${url}...`);
 
     // Create a temporary file path with unique name
-    const fileExt = url.startsWith('data:')
+    const ext = url.startsWith('data:')
       ? url.match(/^data:image\/(\w+);/)
-        ? url.match(/^data:image\/(\w+);/)[1]
+        ? url.match(/^data:image\/(\w+);/)?.[1] || 'jpg'
         : 'jpg'
       : url.split('.').pop()?.toLowerCase() || 'jpg';
 
     // Ensure valid extension
-    const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)
-      ? fileExt
+    const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)
+      ? ext
       : 'jpg';
     const tempFilePath = `${tempDir}/${Date.now()}-${Math.random()
       .toString(36)
@@ -126,7 +132,11 @@ async function migrateFile(url, bucket, path) {
     const downloadResult = await downloadFile(url, tempFilePath);
     if (!downloadResult.success) {
       throw new Error(
-        `Download failed: ${downloadResult.error?.message || 'Unknown error'}`
+        `Download failed: ${
+          downloadResult.error && 'message' in downloadResult.error
+            ? downloadResult.error.message
+            : 'Unknown error'
+        }`
       );
     }
 
@@ -165,23 +175,28 @@ async function migrateFile(url, bucket, path) {
       // Clean up temp file
       try {
         fs.unlinkSync(tempFilePath);
-      } catch (cleanupErr) {
+      } catch (cleanupErr: unknown) {
         console.warn(
           `Couldn't remove temp file ${tempFilePath}:`,
-          cleanupErr.message
+          cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
         );
       }
 
       return urlData.publicUrl;
-    } catch (supabaseError) {
+    } catch (supabaseError: unknown) {
       console.error(
         `Supabase upload error for ${path}:`,
-        supabaseError.message
+        supabaseError instanceof Error
+          ? supabaseError.message
+          : String(supabaseError)
       );
       throw supabaseError;
     }
-  } catch (error) {
-    console.error(`Failed to migrate file ${url}:`, error.message);
+  } catch (error: unknown) {
+    console.error(
+      `Failed to migrate file ${url}:`,
+      error instanceof Error ? error.message : String(error)
+    );
     return null;
   }
 }
@@ -211,13 +226,16 @@ async function migrateImages() {
     );
 
     // Check if our image bucket exists
-    const imageBucket = buckets.find((b) => b.name === IMAGE_BUCKET_NAME);
+    const imageBucket = buckets.find((b: any) => b.name === IMAGE_BUCKET_NAME);
 
     if (!imageBucket) {
       console.error(
         `ERROR: Bucket "${IMAGE_BUCKET_NAME}" not found in your Supabase account.`
       );
-      console.log('Available buckets:', buckets.map((b) => b.name).join(', '));
+      console.log(
+        'Available buckets:',
+        buckets.map((b: any) => b.name).join(', ')
+      );
       console.log(
         `Please update the IMAGE_BUCKET_NAME variable in this script to match one of your existing buckets`
       );
@@ -285,7 +303,7 @@ async function migrateImages() {
         const randomId = Math.random().toString(36).substring(2, 10);
         const ext = imageUrl.startsWith('data:')
           ? imageUrl.match(/^data:image\/(\w+);/)
-            ? imageUrl.match(/^data:image\/(\w+);/)[1]
+            ? imageUrl.match(/^data:image\/(\w+);/)?.[1] || 'jpg'
             : 'jpg'
           : imageUrl.split('.').pop()?.toLowerCase() || 'jpg';
 
@@ -339,10 +357,12 @@ async function migrateImages() {
           });
           console.log(`✅ Updated property ${propertyId} successfully`);
           propertiesUpdated++;
-        } catch (updateError) {
+        } catch (updateError: unknown) {
           console.error(
             `❌ Failed to update property ${propertyId}:`,
-            updateError.message
+            updateError instanceof Error
+              ? updateError.message
+              : String(updateError)
           );
           propertiesWithErrors++;
         }
@@ -359,8 +379,11 @@ async function migrateImages() {
     console.log(`Successfully migrated: ${successfulMigrations}`);
     console.log(`Failed migrations: ${failedMigrations}`);
     console.log('=============================');
-  } catch (error) {
-    console.error('Migration failed with error:', error.message);
+  } catch (error: unknown) {
+    console.error(
+      'Migration failed with error:',
+      error instanceof Error ? error.message : String(error)
+    );
   } finally {
     await prisma.$disconnect();
     console.log('Migration script completed.');
@@ -369,8 +392,12 @@ async function migrateImages() {
     try {
       fs.rmSync(tempDir, { recursive: true, force: true });
       console.log(`Cleaned up temporary directory: ${tempDir}`);
-    } catch (error) {
-      console.warn(`Could not clean up temporary directory: ${error.message}`);
+    } catch (error: unknown) {
+      console.warn(
+        `Could not clean up temporary directory: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 }

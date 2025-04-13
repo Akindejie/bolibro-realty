@@ -1,5 +1,4 @@
 import { LucideIcon } from 'lucide-react';
-import { AuthUser } from 'aws-amplify/auth';
 import { Manager, Tenant, Property, Application } from './prismaTypes';
 import { MotionProps as OriginalMotionProps } from 'framer-motion';
 
@@ -139,10 +138,20 @@ declare global {
     userType: 'manager' | 'tenant';
   }
 
+  interface SupabaseUser {
+    id: string;
+    email?: string;
+    user_metadata?: {
+      role?: string;
+      name?: string;
+      phone_number?: string;
+    };
+  }
+
   interface User {
-    cognitoInfo: AuthUser;
+    supabaseUser: SupabaseUser;
     userInfo: Tenant | Manager;
-    userRole: JsonObject | JsonPrimitive | JsonArray;
+    userRole: string;
   }
 
   interface Property {
@@ -178,7 +187,7 @@ declare global {
     postedDate: string;
     averageRating: number;
     numberOfReviews: number;
-    managerCognitoId: string;
+    managerId: string;
   }
 }
 

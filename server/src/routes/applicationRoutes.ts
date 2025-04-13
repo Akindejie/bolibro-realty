@@ -1,15 +1,19 @@
-import express from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
+import express from 'express';
+import { authMiddleware } from '../middleware/authMiddleware';
 import {
   createApplication,
-  listApplications,
+  getApplications,
   updateApplicationStatus,
-} from "../controllers/applicationControllers";
+} from '../controllers/applicationControllers';
 
 const router = express.Router();
 
-router.post("/", authMiddleware(["tenant"]), createApplication);
-router.put("/:id/status", authMiddleware(["manager"]), updateApplicationStatus);
-router.get("/", authMiddleware(["manager", "tenant"]), listApplications);
+router.post('/', authMiddleware(['tenant']), createApplication);
+router.patch(
+  '/:id/status',
+  authMiddleware(['manager']),
+  updateApplicationStatus
+);
+router.get('/', authMiddleware(['manager', 'tenant']), getApplications);
 
 export default router;

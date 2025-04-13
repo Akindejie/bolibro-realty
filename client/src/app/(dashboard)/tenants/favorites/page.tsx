@@ -4,21 +4,15 @@ import Card from '@/components/Card';
 import Header from '@/components/Header';
 import Loading from '@/components/Loading';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import {
-  useGetAuthUserQuery,
-  useGetPropertiesQuery,
-  useGetTenantQuery,
-} from '@/state/api';
+import { useGetPropertiesQuery, useGetTenantQuery } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import React from 'react';
 
 const Favorites = () => {
-  const { data: authUser } = useGetAuthUserQuery();
-  const { data: tenant } = useGetTenantQuery(
-    authUser?.cognitoInfo?.userId || '',
-    {
-      skip: !authUser?.cognitoInfo?.userId,
-    }
-  );
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
+  const { data: tenant } = useGetTenantQuery(user?.id || '', {
+    skip: !isAuthenticated || !user?.id,
+  });
 
   const {
     data: favoriteProperties,

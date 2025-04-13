@@ -16,8 +16,8 @@ model Property {
   pricePerMonth     Float
   securityDeposit   Float
   applicationFee    Float
+  cleaningFee       Float          
   photoUrls         String[]
-  images            String[]       @default([])
   amenities         Amenity[]
   highlights        Highlight[]
   isPetsAllowed     Boolean        @default(false)
@@ -26,23 +26,24 @@ model Property {
   baths             Float
   squareFeet        Int
   propertyType      PropertyType
-  status            PropertyStatus @default(Available)
   postedDate        DateTime       @default(now())
   averageRating     Float?         @default(0)
   numberOfReviews   Int?           @default(0)
   locationId        Int
-  managerCognitoId  String
+  managerId         String
+  status            PropertyStatus @default(Available)
+  images            String[]       @default([])
   applications      Application[]
   leases            Lease[]
   location          Location       @relation(fields: [locationId], references: [id])
-  manager           Manager        @relation(fields: [managerCognitoId], references: [cognitoId])
+  manager           Manager        @relation(fields: [managerId], references: [supabaseId], map: "Property_managerCognitoId_fkey")
   favoritedBy       Tenant[]       @relation("TenantFavorites")
   tenants           Tenant[]       @relation("TenantProperties")
 }
 
 model Manager {
   id                Int        @id @default(autoincrement())
-  cognitoId         String     @unique
+  supabaseId        String     @unique(map: "Manager_cognitoId_key")
   name              String
   email             String
   phoneNumber       String
@@ -51,7 +52,7 @@ model Manager {
 
 model Tenant {
   id           Int           @id @default(autoincrement())
-  cognitoId    String        @unique
+  supabaseId   String        @unique(map: "Tenant_cognitoId_key")
   name         String
   email        String
   phoneNumber  String
@@ -77,7 +78,7 @@ model Application {
   applicationDate DateTime
   status          ApplicationStatus
   propertyId      Int
-  tenantCognitoId String
+  tenantId        String
   name            String
   email           String
   phoneNumber     String
@@ -85,21 +86,21 @@ model Application {
   leaseId         Int?              @unique
   lease           Lease?            @relation(fields: [leaseId], references: [id])
   property        Property          @relation(fields: [propertyId], references: [id])
-  tenant          Tenant            @relation(fields: [tenantCognitoId], references: [cognitoId])
+  tenant          Tenant            @relation(fields: [tenantId], references: [supabaseId], map: "Application_tenantCognitoId_fkey")
 }
 
 model Lease {
-  id              Int             @id @default(autoincrement())
-  startDate       DateTime
-  endDate         DateTime
-  rent            Float
-  deposit         Float
-  propertyId      Int
-  tenantCognitoId String
-  application     Application?
-  property        Property        @relation(fields: [propertyId], references: [id])
-  tenant          Tenant          @relation(fields: [tenantCognitoId], references: [cognitoId])
-  payments        Payment[]
+  id          Int          @id @default(autoincrement())
+  startDate   DateTime
+  endDate     DateTime
+  rent        Float
+  deposit     Float
+  propertyId  Int
+  tenantId    String
+  application Application?
+  property    Property     @relation(fields: [propertyId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [supabaseId], map: "Lease_tenantCognitoId_fkey")
+  payments    Payment[]
 }
 
 model Payment {

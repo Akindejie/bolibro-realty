@@ -58,26 +58,28 @@ export const withToast = async <T>(
 
 export const createNewUserInDatabase = async (
   user: any,
-  idToken: any,
+  accessToken: string,
   userRole: string,
   fetchWithBQ: any
 ) => {
   const createEndpoint =
     userRole?.toLowerCase() === 'manager' ? '/managers' : '/tenants';
-  console.log('userRole:', userRole);
+  console.log('Creating user in database:', userRole);
+  console.log('User ID:', user.id);
 
   const createUserResponse = await fetchWithBQ({
     url: createEndpoint,
     method: 'POST',
     body: {
-      cognitoId: user.userId,
-      name: user.username,
-      email: idToken?.payload?.email || '',
-      phoneNumber: '',
+      supabaseId: user.id,
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+      email: user.email || '',
+      phoneNumber: user.user_metadata?.phone_number || '',
     },
   });
 
   if (createUserResponse.error) {
+    console.error('Create user error:', createUserResponse.error);
     throw new Error('Failed to create user record');
   }
 

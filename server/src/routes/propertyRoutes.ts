@@ -22,7 +22,10 @@ router.get('/:id', getProperty);
 router.post(
   '/',
   authMiddleware(['manager']),
-  handleUpload.array('photos'),
+  handleUpload.fields([
+    { name: 'photos', maxCount: 10 },
+    { name: 'images', maxCount: 10 },
+  ]),
   createProperty
 );
 router.patch(

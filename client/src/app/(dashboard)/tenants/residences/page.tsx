@@ -4,28 +4,22 @@ import Card from '@/components/Card';
 import Header from '@/components/Header';
 import Loading from '@/components/Loading';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import {
-  useGetAuthUserQuery,
-  useGetCurrentResidencesQuery,
-  useGetTenantQuery,
-} from '@/state/api';
+import { useGetCurrentResidencesQuery, useGetTenantQuery } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import React from 'react';
 
 const Residences = () => {
-  const { data: authUser } = useGetAuthUserQuery();
-  const { data: tenant } = useGetTenantQuery(
-    authUser?.cognitoInfo?.userId || '',
-    {
-      skip: !authUser?.cognitoInfo?.userId,
-    }
-  );
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
+  const { data: tenant } = useGetTenantQuery(user?.id || '', {
+    skip: !isAuthenticated || !user?.id,
+  });
 
   const {
     data: currentResidences,
     isLoading,
     error,
-  } = useGetCurrentResidencesQuery(authUser?.cognitoInfo?.userId || '', {
-    skip: !authUser?.cognitoInfo?.userId,
+  } = useGetCurrentResidencesQuery(user?.id || '', {
+    skip: !isAuthenticated || !user?.id,
   });
 
   if (isLoading) return <Loading />;

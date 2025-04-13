@@ -5,16 +5,11 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { useAppSelector } from '@/state/redux';
 
 const CallToActionSection = () => {
   const router = useRouter();
-  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    setIsAuthenticated(authStatus === 'authenticated');
-  }, [authStatus]);
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
 
   const handleSearch = () => {
     router.push('/search');

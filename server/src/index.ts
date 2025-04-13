@@ -68,8 +68,8 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/properties', propertyRoutes);
-app.use('/tenants', authMiddleware(['tenant']), tenantRoutes);
-app.use('/managers', authMiddleware(['manager']), managerRoutes);
+app.use('/tenants', tenantRoutes);
+app.use('/managers', managerRoutes);
 app.use('/leases', leaseRoutes);
 app.use('/applications', applicationRoutes);
 

@@ -3,11 +3,11 @@
 import { NAVBAR_HEIGHT } from '@/lib/constants';
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { useGetAuthUserQuery } from '@/state/api';
 import { usePathname, useRouter } from 'next/navigation';
-import { signOut } from 'aws-amplify/auth';
+import { useAuth } from '@/app/(auth)/authProvider';
 import { Bell, MessageCircle, Plus, Search } from 'lucide-react';
 import {
   DropdownMenu,
@@ -18,18 +18,26 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { SidebarTrigger } from './ui/sidebar';
+import { useAppSelector } from '@/state/redux';
 
 const Navbar = () => {
   const { data: authUser } = useGetAuthUserQuery();
   const router = useRouter();
   const pathname = usePathname();
+  const { signOut } = useAuth();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isDashboardPage =
     pathname.includes('/managers') || pathname.includes('/tenants');
 
   const handleSignOut = async () => {
-    await signOut();
-    window.location.href = '/';
+    try {
+      await signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
@@ -76,7 +84,7 @@ const Navbar = () => {
               onClick={() =>
                 router.push(
                   authUser.userRole?.toLowerCase() === 'manager'
-                    ? '/managers/newproperty'
+                    ? '/managers/properties/new'
                     : '/search'
                 )
               }

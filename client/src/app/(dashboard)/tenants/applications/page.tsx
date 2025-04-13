@@ -4,20 +4,26 @@ import ApplicationCard from '@/components/ApplicationCard';
 import Header from '@/components/Header';
 import Loading from '@/components/Loading';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { useGetApplicationsQuery, useGetAuthUserQuery } from '@/state/api';
+import { useGetApplicationsQuery } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import { CircleCheckBig, Clock, Download, XCircle } from 'lucide-react';
 import React from 'react';
 
 const Applications = () => {
-  const { data: authUser } = useGetAuthUserQuery();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
   const {
     data: applications,
     isLoading,
     isError,
-  } = useGetApplicationsQuery({
-    userId: authUser?.cognitoInfo?.userId,
-    userType: 'tenant',
-  });
+  } = useGetApplicationsQuery(
+    {
+      userId: user?.id,
+      userType: 'tenant',
+    },
+    {
+      skip: !isAuthenticated || !user?.id,
+    }
+  );
 
   if (isLoading) return <Loading />;
   if (isError || !applications) return <div>Error fetching applications</div>;

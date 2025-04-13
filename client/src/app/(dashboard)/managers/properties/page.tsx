@@ -20,15 +20,21 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   useDeletePropertyMutation,
-  useGetAuthUserQuery,
   useGetManagerPropertiesQuery,
   useUpdateBulkPropertyStatusMutation,
 } from '@/state/api';
+import { useAppSelector } from '@/state/redux';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const Properties = () => {
-  const { data: authUser } = useGetAuthUserQuery();
+  const { user, isAuthenticated } = useAppSelector((state) => state.user);
+  console.log('User object:', JSON.stringify(user, null, 2));
+
+  // Get the ID from the JWT token if available, otherwise fall back to the user.id
+  // The JWT token contains the correct Supabase ID we need to use
+  const userId = user?.supabaseId || user?.id; // If supabaseId doesn't exist, fall back to id
+
   const [deleteProperty] = useDeletePropertyMutation();
   const [updateBulkPropertyStatus] = useUpdateBulkPropertyStatusMutation();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -41,8 +47,8 @@ const Properties = () => {
     data: managerProperties,
     isLoading,
     error,
-  } = useGetManagerPropertiesQuery(authUser?.cognitoInfo?.userId || '', {
-    skip: !authUser?.cognitoInfo?.userId,
+  } = useGetManagerPropertiesQuery(userId || '', {
+    skip: !isAuthenticated || !userId,
   });
 
   const handleDeleteProperty = (propertyId: number) => {
