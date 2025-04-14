@@ -20,20 +20,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import PropertyImageGallery from '@/components/PropertyImageGallery';
 import { toast } from 'sonner';
 
-interface EditPropertyPageProps {
-  params: {
-    id: string;
-  };
-}
-
-const EditProperty = ({ params }: EditPropertyPageProps) => {
+const EditProperty = () => {
+  const params = useParams();
   // Don't parse params immediately - use a state to store the ID
   const [propertyId, setPropertyId] = useState<number | null>(null);
   const [updateProperty, { isLoading: isSubmitting, isSuccess }] =
@@ -59,7 +54,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
   useEffect(() => {
     // Parse the ID in the effect to avoid direct params access warning
     if (params && params.id) {
-      setPropertyId(parseInt(params.id));
+      setPropertyId(parseInt(params.id as string));
     }
   }, [params]);
 
@@ -269,14 +264,12 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
         data: formData,
       }).unwrap();
 
-
       // Navigate back to properties list page
       setTimeout(() => {
         router.push('/managers/properties');
       }, 500);
     } catch (error: unknown) {
       console.error('Error updating property:', error);
-
     }
   };
 
