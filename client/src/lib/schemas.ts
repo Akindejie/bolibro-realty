@@ -36,7 +36,9 @@ export const propertyEditSchema = z.object({
   cleaningFee: z.coerce.number().positive().min(0).int(),
   isPetsAllowed: z.boolean(),
   isParkingIncluded: z.boolean(),
-  photoUrls: z.array(z.instanceof(File)).optional(),
+  photoUrls: z
+    .union([z.array(z.instanceof(File)), z.array(z.string())])
+    .optional(),
   amenities: z.string().min(1, 'Amenities are required'),
   highlights: z.string().min(1, 'Highlights are required'),
   beds: z.coerce.number().positive().min(0).max(10).int(),

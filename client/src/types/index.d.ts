@@ -173,6 +173,7 @@ declare global {
     pricePerMonth: number;
     securityDeposit: number;
     applicationFee: number;
+    cleaningFee?: number;
     photoUrls: string[];
     images?: string[];
     amenities: string[];

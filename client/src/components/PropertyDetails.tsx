@@ -41,8 +41,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   // Initialize localImages from property data
   useEffect(() => {
     if (property) {
-      console.log('Property data received:', property);
-
       // First check if we have stored images in localStorage
       const storedImagesKey = `property_${property.id}_images`;
       const storedImages = localStorage.getItem(storedImagesKey);
@@ -51,7 +49,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         try {
           const parsedImages = JSON.parse(storedImages);
           setLocalImages(parsedImages);
-          console.log('Loaded images from local storage:', parsedImages);
 
           // Attempt to sync with server if we're online
           if (navigator.onLine) {
@@ -61,7 +58,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
             })
               .unwrap()
               .then(() => {
-                console.log('Successfully synced stored images with server');
                 localStorage.removeItem(storedImagesKey);
               })
               .catch((err) => {
@@ -69,53 +65,47 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
               });
           }
         } catch (e) {
-          console.error('Failed to parse stored images:', e);
           localStorage.removeItem(storedImagesKey);
         }
+      } else {
+        // Use property images from the API
+        // Better handling of image arrays - combine both fields and remove duplicates
+        const imagesArray = Array.isArray(property.images)
+          ? property.images
+          : [];
+        const photoUrlsArray = Array.isArray(property.photoUrls)
+          ? property.photoUrls
+          : [];
+
+        // Combine both arrays and remove duplicates
+        const allPropertyImages = [
+          ...new Set([...imagesArray, ...photoUrlsArray]),
+        ];
+
+        // Only update local images if they've changed
+        const currentImagesString = JSON.stringify(localImages);
+        const newImagesString = JSON.stringify(allPropertyImages);
+
+        if (currentImagesString !== newImagesString) {
+          setLocalImages(allPropertyImages);
+        }
       }
-
-      // Use property images
-      // Better handling of image arrays - combine both fields and remove duplicates
-      const imagesArray = Array.isArray(property.images) ? property.images : [];
-      const photoUrlsArray = Array.isArray(property.photoUrls)
-        ? property.photoUrls
-        : [];
-
-      // Combine both arrays and remove duplicates
-      const allPropertyImages = [
-        ...new Set([...imagesArray, ...photoUrlsArray]),
-      ];
-
-      console.log(`Found ${imagesArray.length} images in 'images' field`);
-      console.log(`Found ${photoUrlsArray.length} images in 'photoUrls' field`);
-      console.log(
-        `Combined ${allPropertyImages.length} unique images from both fields`
-      );
-
-      setLocalImages(allPropertyImages);
     }
-  }, [property, updatePropertyImages]);
+  }, [property, property?.id, updatePropertyImages]);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || !property) return;
 
     try {
-      console.log(
-        `Uploading ${files.length} files for property ${property.id}...`
-      );
-
       // Use RTK mutation for upload
       const result = await uploadPropertyImages({
         propertyId: String(property.id),
         images: Array.from(files),
       }).unwrap();
 
-      console.log('Upload response:', result);
-
       if (result.imageUrls && Array.isArray(result.imageUrls)) {
         // Update local state immediately
         const updatedImages = [...localImages, ...result.imageUrls];
-        console.log('Updating local images to:', updatedImages);
         setLocalImages(updatedImages);
 
         // Store in localStorage as backup
@@ -131,16 +121,25 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         })
           .unwrap()
           .then(() => {
-            console.log('Successfully updated images on server');
             localStorage.removeItem(`property_${property.id}_images`);
+
+            toast.success('Images uploaded successfully');
+
+            // Force a page refresh after a short delay to ensure the changes are visible
+            setTimeout(() => {
+              const refreshTimestamp = Date.now();
+              const propertyDetailsUrl = `/managers/properties/${property.id}?refresh=${refreshTimestamp}`;
+              window.location.href = propertyDetailsUrl;
+            }, 800);
           })
           .catch((err) => {
             console.error('Failed to update images on server:', err);
             // Keep the localStorage backup for later sync
+            toast.success(
+              'Images uploaded but not synced with server. Changes saved locally.'
+            );
           });
       }
-
-      toast.success('Images uploaded successfully');
     } catch (error: any) {
       console.error('Error uploading images:', error);
 
@@ -161,8 +160,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   const handleImagesChange = (newImages: string[]) => {
     if (!property) return;
 
-    console.log('Images changed to:', newImages);
-
     // Update local state immediately for responsive UI
     setLocalImages(newImages);
 
@@ -179,8 +176,15 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
     })
       .unwrap()
       .then(() => {
-        console.log('Successfully updated images on server');
         localStorage.removeItem(`property_${property.id}_images`);
+        toast.success('Images updated successfully');
+
+        // Force a page refresh after a short delay to ensure the changes are visible
+        setTimeout(() => {
+          const refreshTimestamp = Date.now();
+          const propertyDetailsUrl = `/managers/properties/${property.id}?refresh=${refreshTimestamp}`;
+          window.location.href = propertyDetailsUrl;
+        }, 800);
       })
       .catch((err) => {
         console.error('Failed to update images on server:', err);
@@ -254,39 +258,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
-            <div className="flex items-center">
-              <Bed className="h-5 w-5 text-gray-500 mr-2" />
-              <div>
-                <p className="text-sm text-gray-500">Beds</p>
-                <p className="font-semibold">{property.beds}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Bath className="h-5 w-5 text-gray-500 mr-2" />
-              <div>
-                <p className="text-sm text-gray-500">Baths</p>
-                <p className="font-semibold">{property.baths}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Home className="h-5 w-5 text-gray-500 mr-2" />
-              <div>
-                <p className="text-sm text-gray-500">Square Feet</p>
-                <p className="font-semibold">{property.squareFeet}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Calendar className="h-5 w-5 text-gray-500 mr-2" />
-              <div>
-                <p className="text-sm text-gray-500">Posted</p>
-                <p className="font-semibold">
-                  {new Date(property.postedDate).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
             <div>
               <h3 className="text-lg font-semibold mb-2">Price</h3>
@@ -297,60 +268,158 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                 </span>
                 <span className="text-gray-500 ml-1">/month</span>
               </div>
-              <div className="mt-2 text-sm text-gray-600">
-                <p>
-                  Security Deposit: ${property.securityDeposit.toLocaleString()}
-                </p>
-                <p>
-                  Application Fee: ${property.applicationFee.toLocaleString()}
-                </p>
+              <div className="mt-3 space-y-2">
+                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                  <p className="text-sm font-medium">Security Deposit</p>
+                  <p className="font-semibold">
+                    ${property.securityDeposit.toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                  <p className="text-sm font-medium">Application Fee</p>
+                  <p className="font-semibold">
+                    ${property.applicationFee.toLocaleString()}
+                  </p>
+                </div>
+                {property.cleaningFee && (
+                  <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                    <p className="text-sm font-medium">Cleaning Fee</p>
+                    <p className="font-semibold">
+                      ${property.cleaningFee.toLocaleString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Property Details</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                  <div className="flex items-center">
+                    <Bed className="h-4 w-4 text-gray-500 mr-2" />
+                    <p className="text-sm font-medium">Beds</p>
+                  </div>
+                  <p className="font-semibold">{property.beds}</p>
+                </div>
+                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                  <div className="flex items-center">
+                    <Bath className="h-4 w-4 text-gray-500 mr-2" />
+                    <p className="text-sm font-medium">Baths</p>
+                  </div>
+                  <p className="font-semibold">{property.baths}</p>
+                </div>
+                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                  <div className="flex items-center">
+                    <Home className="h-4 w-4 text-gray-500 mr-2" />
+                    <p className="text-sm font-medium">Square Feet</p>
+                  </div>
+                  <p className="font-semibold">{property.squareFeet}</p>
+                </div>
+                <div className="flex justify-between items-center px-3 py-2 bg-gray-50 rounded-md">
+                  <div className="flex items-center">
+                    <Home className="h-4 w-4 text-gray-500 mr-2" />
+                    <p className="text-sm font-medium">Property Type</p>
+                  </div>
+                  <p className="font-semibold">{property.propertyType}</p>
+                </div>
               </div>
             </div>
 
             <div>
               <h3 className="text-lg font-semibold mb-2">Features</h3>
-              <ul className="space-y-1">
-                <li className="flex items-center">
+              <div className="space-y-2">
+                <div className="flex items-center px-3 py-2 bg-gray-50 rounded-md">
                   {property.isPetsAllowed ? (
                     <Check className="h-4 w-4 text-green-500 mr-2" />
                   ) : (
                     <X className="h-4 w-4 text-red-500 mr-2" />
                   )}
-                  Pets Allowed
-                </li>
-                <li className="flex items-center">
+                  <p className="text-sm font-medium">Pets Allowed</p>
+                </div>
+                <div className="flex items-center px-3 py-2 bg-gray-50 rounded-md">
                   {property.isParkingIncluded ? (
                     <Check className="h-4 w-4 text-green-500 mr-2" />
                   ) : (
                     <X className="h-4 w-4 text-red-500 mr-2" />
                   )}
-                  Parking Included
-                </li>
-                <li className="flex items-center">
-                  <Home className="h-4 w-4 text-gray-500 mr-2" />
-                  {property.propertyType}
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Amenities</h3>
-              <div className="flex flex-wrap gap-2">
-                {property.amenities?.map((amenity: string, index: number) => (
-                  <Badge key={index} variant="outline" className="bg-gray-100">
-                    {amenity}
-                  </Badge>
-                ))}
-                {property.amenities?.length === 0 && (
-                  <p className="text-sm text-gray-500">No amenities listed</p>
-                )}
+                  <p className="text-sm font-medium">Parking Included</p>
+                </div>
+                <div className="px-3 py-2 bg-gray-50 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm font-medium">Available on</p>
+                    <p className="font-semibold text-sm">
+                      {new Date(property.postedDate).toLocaleDateString(
+                        'en-US',
+                        {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        }
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6">
+          <div className="my-6">
+            <h3 className="text-lg font-semibold mb-2">
+              Amenities & Highlights
+            </h3>
+            <div className="bg-gray-50 rounded-md p-4">
+              {property.amenities?.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-2">Amenities</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {property.amenities.map(
+                      (amenity: string, index: number) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="bg-white border-gray-300"
+                        >
+                          {amenity}
+                        </Badge>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {property.highlights?.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Highlights</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {property.highlights.map(
+                      (highlight: string, index: number) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="bg-white border-gray-300"
+                        >
+                          {highlight}
+                        </Badge>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!property.amenities?.length && !property.highlights?.length && (
+                <p className="text-sm text-gray-500">
+                  No amenities or highlights listed
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8">
             <h3 className="text-lg font-semibold mb-2">Description</h3>
-            <p className="text-gray-700">{property.description}</p>
+            <div className="bg-gray-50 rounded-md p-4">
+              <p className="text-gray-700">{property.description}</p>
+            </div>
           </div>
         </div>
       </div>

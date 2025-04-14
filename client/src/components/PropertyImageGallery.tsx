@@ -34,16 +34,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
 
   // Update displayed images when prop changes
   useEffect(() => {
-    console.log('PropertyImageGallery - Images received:', images);
-    console.log(
-      'PropertyImageGallery - Images is array:',
-      Array.isArray(images)
-    );
-    console.log('PropertyImageGallery - Images length:', images.length);
-    if (images.length > 0) {
-      console.log('PropertyImageGallery - First image URL:', images[0]);
-      console.log('PropertyImageGallery - All images:', JSON.stringify(images));
-    }
     setDisplayedImages(images);
   }, [images]);
 
@@ -55,7 +45,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
     setUploadError(null);
 
     try {
-      console.log(`Uploading ${files.length} files...`);
       await onImageUpload(files);
       // Note: We don't need to update displayedImages here because
       // the parent component will pass the updated images as props
@@ -77,7 +66,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
       // Make a copy of images and remove the image at the specified index
       const newImages = [...displayedImages];
       newImages.splice(index, 1);
-      console.log('Removing image at index', index, 'new array:', newImages);
 
       // Update the images through the provided callback
       onImagesChange(newImages);
@@ -113,7 +101,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
         newImages[newIndex],
         newImages[index],
       ];
-      console.log('Reordering images:', newImages);
 
       // Update the images through the provided callback
       onImagesChange(newImages);
@@ -183,7 +170,6 @@ const PropertyImageGallery: React.FC<PropertyImageGalleryProps> = ({
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {displayedImages.map((src, index) => {
-          console.log(`Rendering image ${index}:`, src);
           return (
             <div
               key={`image-${index}-${

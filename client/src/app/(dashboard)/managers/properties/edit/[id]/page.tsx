@@ -34,11 +34,19 @@ interface EditPropertyPageProps {
 }
 
 const EditProperty = ({ params }: EditPropertyPageProps) => {
-  const propertyId = parseInt(params.id);
+  // Don't parse params immediately - use a state to store the ID
+  const [propertyId, setPropertyId] = useState<number | null>(null);
   const [updateProperty, { isLoading: isSubmitting, isSuccess }] =
     useUpdatePropertyMutation();
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
-  const { data: property, isLoading } = useGetPropertyQuery(propertyId);
+  // Skip the API call until we have the propertyId
+  const {
+    data: property,
+    isLoading,
+    refetch: refetchProperty,
+  } = useGetPropertyQuery(propertyId ?? 0, {
+    skip: propertyId === null,
+  });
   const router = useRouter();
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [addressSearch, setAddressSearch] = useState('');
@@ -46,6 +54,14 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [uploadPropertyImages] = useUploadPropertyImagesMutation();
   const [updatePropertyImages] = useUpdatePropertyImagesMutation();
+
+  // Set property ID from params after component mounts
+  useEffect(() => {
+    // Parse the ID in the effect to avoid direct params access warning
+    if (params && params.id) {
+      setPropertyId(parseInt(params.id));
+    }
+  }, [params]);
 
   const form = useForm<PropertyEditFormData>({
     resolver: zodResolver(propertyEditSchema),
@@ -55,6 +71,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
       pricePerMonth: 0,
       securityDeposit: 0,
       applicationFee: 0,
+      cleaningFee: 0,
       isPetsAllowed: false,
       isParkingIncluded: false,
       photoUrls: [],
@@ -97,6 +114,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
         pricePerMonth: property.pricePerMonth || 0,
         securityDeposit: property.securityDeposit || 0,
         applicationFee: property.applicationFee || 0,
+        cleaningFee: property.cleaningFee || 0,
         isPetsAllowed: Boolean(property.isPetsAllowed),
         isParkingIncluded: Boolean(property.isParkingIncluded),
         photoUrls: [],
@@ -174,102 +192,91 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
   };
 
   const onSubmit = async (data: PropertyEditFormData) => {
-    if (!isAuthenticated || !user?.id) {
-      toast.error('No manager ID found');
+    if (!isAuthenticated || !user?.id || propertyId === null) {
+      toast.error(
+        'No manager ID found or property ID invalid. Please try again.'
+      );
       return;
     }
 
+    toast.loading('Updating property...', { id: 'update-property' });
+
     try {
+      // Convert amenities and highlights to proper arrays
+      let amenitiesArray: string[] = [];
+      if (data.amenities) {
+        if (typeof data.amenities === 'string') {
+          // Split by comma but keep empty values out
+          amenitiesArray = data.amenities
+            .split(',')
+            .filter((item) => item.trim() !== '');
+        } else if (Array.isArray(data.amenities)) {
+          amenitiesArray = data.amenities;
+        } else {
+          amenitiesArray = [data.amenities];
+        }
+      }
+
+      let highlightsArray: string[] = [];
+      if (data.highlights) {
+        if (typeof data.highlights === 'string') {
+          // Split by comma but keep empty values out
+          highlightsArray = data.highlights
+            .split(',')
+            .filter((item) => item.trim() !== '');
+        } else if (Array.isArray(data.highlights)) {
+          highlightsArray = data.highlights;
+        } else {
+          highlightsArray = [data.highlights];
+        }
+      }
+
+      // Create a FormData object for the update
       const formData = new FormData();
 
-      // Convert comma-separated strings back to arrays for server
-      const amenities = data.amenities
-        ? data.amenities.split(',').filter(Boolean)
-        : [];
-      const highlights = data.highlights
-        ? data.highlights.split(',').filter(Boolean)
-        : [];
+      // Add all form fields to the FormData
+      formData.append('name', data.name);
+      formData.append('description', data.description || '');
+      formData.append('pricePerMonth', String(data.pricePerMonth || 0));
+      formData.append('securityDeposit', String(data.securityDeposit || 0));
+      formData.append('applicationFee', String(data.applicationFee || 0));
+      formData.append('cleaningFee', String(data.cleaningFee || 0));
+      formData.append('isPetsAllowed', String(data.isPetsAllowed));
+      formData.append('isParkingIncluded', String(data.isParkingIncluded));
+      formData.append('propertyType', data.propertyType);
+      formData.append('beds', String(data.beds || 1));
+      formData.append('baths', String(data.baths || 1));
+      formData.append('squareFeet', String(data.squareFeet || 0));
+      formData.append('address', data.address);
+      formData.append('city', data.city);
+      formData.append('state', data.state);
+      formData.append('country', data.country);
+      formData.append('postalCode', data.postalCode);
 
-      // Add all form fields to formData
-      Object.entries(data).forEach(([key, value]) => {
-        // Skip null or undefined values
-        if (value === null || value === undefined) {
-          console.log(`Skipping ${key} because it's null or undefined`);
-          return;
-        }
+      // Add amenities and highlights as JSON strings
+      formData.append('amenities', JSON.stringify(amenitiesArray));
+      formData.append('highlights', JSON.stringify(highlightsArray));
 
-        if (key === 'photoUrls' && value && (value as File[]).length > 0) {
-          const files = value as File[];
-          console.log(`Adding ${files.length} photos to FormData`);
-          files.forEach((file: File, index) => {
-            formData.append('photos', file);
-            console.log(`  - Added photo ${index + 1}: ${file.name}`);
-          });
-        } else if (key === 'amenities') {
-          console.log(
-            `Adding amenities as JSON string: ${JSON.stringify(amenities)}`
-          );
-          formData.append(key, JSON.stringify(amenities));
-        } else if (key === 'highlights') {
-          formData.append(key, JSON.stringify(highlights));
-        } else if (key !== 'photos' && value !== null && value !== undefined) {
-          // Skip photos as they're handled separately
-          formData.append(key, String(value));
-        }
-      });
-
-      // Always include the manager ID
-      console.log(`Adding managerId: ${user.id}`);
-      formData.append('managerId', user.id);
-
-      // Log FormData entries for debugging
-      console.log('FormData entries:');
-      for (const [key, value] of formData.entries()) {
-        console.log(
-          `${key}: ${
-            typeof value === 'string' ? value : `[${value.constructor.name}]`
-          }`
-        );
+      // Include the current image URLs to prevent losing them during update
+      if (property && property.images && property.images.length > 0) {
+        // Send existing images as a JSON string instead of as files
+        formData.append('existingImages', JSON.stringify(property.images));
       }
 
-      // Use try-catch for the update operation
-      try {
-        console.log(`Submitting update request for property ID: ${propertyId}`);
-        const result = await updateProperty({
-          id: propertyId,
-          data: formData,
-        }).unwrap();
+      // Use the RTK Query mutation instead of axios directly
+      await updateProperty({
+        id: propertyId,
+        data: formData,
+      }).unwrap();
 
-        console.log('Update result:', result);
-        toast.success('Property updated successfully!');
 
-        // Wait a moment before redirecting
-        setTimeout(() => {
-          router.push('/managers/properties');
-        }, 1500);
-      } catch (apiError: any) {
-        console.error('API error updating property:', apiError);
-        console.error('API error details:', JSON.stringify(apiError, null, 2));
+      // Navigate back to properties list page
+      setTimeout(() => {
+        router.push('/managers/properties');
+      }, 500);
+    } catch (error: unknown) {
+      console.error('Error updating property:', error);
 
-        // Show detailed error message
-        const errorMessage =
-          apiError.data?.message ||
-          apiError.error ||
-          'Failed to update property';
-        toast.error(errorMessage);
-
-        // Log additional details for debugging
-        if (apiError.status) {
-          console.error(`Status code: ${apiError.status}`);
-        }
-
-        if (apiError.data?.validationErrors) {
-          console.error('Validation errors:', apiError.data.validationErrors);
-        }
-      }
-    } catch (error: any) {
-      console.error('Error preparing data for update:', error);
-      toast.error(`Error preparing form data: ${error.message}`);
     }
   };
 
@@ -277,14 +284,33 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
     if (!files || files.length === 0) return;
 
     try {
-      await uploadPropertyImages({
+      const result = await uploadPropertyImages({
         propertyId: String(propertyId),
         images: Array.from(files),
       }).unwrap();
 
-      // The component will be updated through the API response and re-render
+      if (result && result.imageUrls) {
+        // Update the local property state to include the new images
+        if (property) {
+          // Create a new array with existing images plus new ones
+          const updatedImages = [
+            ...(property.images || []),
+            ...result.imageUrls,
+          ];
+
+          // Update the form state
+          form.setValue('photoUrls', updatedImages);
+
+          // Force refetch to update the UI with new images
+          refetchProperty();
+
+          toast.success(
+            `Successfully uploaded ${result.imageUrls.length} image(s)`
+          );
+        }
+      }
     } catch (error) {
-      console.error('Failed to upload images:', error);
+      toast.error('Failed to upload images. Please try again.');
     }
   };
 
@@ -294,8 +320,17 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
         propertyId: String(propertyId),
         images,
       }).unwrap();
+
+      // Update the form state to reflect the new order/removal
+      form.setValue('photoUrls', images);
+
+      // Also update the local property data
+      if (property) {
+        // Force refetch to get the latest data
+        refetchProperty();
+      }
     } catch (error) {
-      console.error('Failed to update images:', error);
+      toast.error('Failed to update image order. Please try again.');
     }
   };
 
@@ -338,7 +373,7 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
                 label="Price per Month"
                 type="number"
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <CustomFormField
                   name="securityDeposit"
                   label="Security Deposit"
@@ -347,6 +382,11 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
                 <CustomFormField
                   name="applicationFee"
                   label="Application Fee"
+                  type="number"
+                />
+                <CustomFormField
+                  name="cleaningFee"
+                  label="Cleaning Fee"
                   type="number"
                 />
               </div>
@@ -407,28 +447,32 @@ const EditProperty = ({ params }: EditPropertyPageProps) => {
                 Amenities and Highlights
               </h2>
               <div className="space-y-6">
-                <CustomFormField
-                  name="amenities"
-                  label="Amenities"
-                  type="select"
-                  multiple={true}
-                  placeholder="Select amenities"
-                  options={Object.keys(AmenityEnum).map((amenity) => ({
-                    value: amenity,
-                    label: amenity.replace(/([A-Z])/g, ' $1').trim(),
-                  }))}
-                />
-                <CustomFormField
-                  name="highlights"
-                  label="Highlights"
-                  type="select"
-                  multiple={true}
-                  placeholder="Select highlights"
-                  options={Object.keys(HighlightEnum).map((highlight) => ({
-                    value: highlight,
-                    label: highlight.replace(/([A-Z])/g, ' $1').trim(),
-                  }))}
-                />
+                <div className="flex flex-col gap-4">
+                  <div className="col-span-2">
+                    <CustomFormField
+                      label="Amenities"
+                      name="amenities"
+                      type="select"
+                      multiple={true}
+                      options={Object.keys(AmenityEnum).map((amenity) => ({
+                        value: amenity,
+                        label: amenity.replace(/([A-Z])/g, ' $1').trim(),
+                      }))}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <CustomFormField
+                      label="Highlights"
+                      name="highlights"
+                      type="select"
+                      multiple={true}
+                      options={Object.keys(HighlightEnum).map((highlight) => ({
+                        value: highlight,
+                        label: highlight.replace(/([A-Z])/g, ' $1').trim(),
+                      }))}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

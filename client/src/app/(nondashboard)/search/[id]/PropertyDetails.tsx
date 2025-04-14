@@ -1,9 +1,9 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AmenityIcons, HighlightIcons } from "@/lib/constants";
-import { formatEnumString } from "@/lib/utils";
-import { useGetPropertyQuery } from "@/state/api";
-import { HelpCircle } from "lucide-react";
-import React from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AmenityIcons, HighlightIcons } from '@/lib/constants';
+import { formatEnumString } from '@/lib/utils';
+import { useGetPropertyQuery } from '@/state/api';
+import { HelpCircle } from 'lucide-react';
+import React from 'react';
 
 const PropertyDetails = ({ propertyId }: PropertyDetailsProps) => {
   const {
@@ -93,23 +93,28 @@ const PropertyDetails = ({ propertyId }: PropertyDetailsProps) => {
             <hr />
             <div className="flex justify-between py-2 bg-secondary-50">
               <span className="text-primary-700 font-medium">
-                Security Deposit
+                Refundable Security Deposit
               </span>
               <span className="text-primary-700">
                 ${property.securityDeposit}
               </span>
             </div>
             <hr />
+            <div className="flex justify-between py-2 bg-secondary-50">
+              <span className="text-primary-700 font-medium">Cleaning Fee</span>
+              <span className="text-primary-700">${property.cleaningFee}</span>
+            </div>
+            <hr />
           </TabsContent>
           <TabsContent value="pets">
             <p className="font-semibold mt-5 mb-2">
-              Pets are {property.isPetsAllowed ? "allowed" : "not allowed"}
+              Pets are {property.isPetsAllowed ? 'allowed' : 'not allowed'}
             </p>
           </TabsContent>
           <TabsContent value="parking">
             <p className="font-semibold mt-5 mb-2">
-              Parking is{" "}
-              {property.isParkingIncluded ? "included" : "not included"}
+              Parking is{' '}
+              {property.isParkingIncluded ? 'included' : 'not included'}
             </p>
           </TabsContent>
         </Tabs>

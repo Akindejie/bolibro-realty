@@ -10,6 +10,8 @@ import {
   updatePropertyStatus,
   updateBulkPropertyStatus,
   uploadPropertyImage,
+  getPropertyLeases,
+  getPropertyPayments,
 } from '../controllers/propertyControllers';
 
 const router = express.Router();
@@ -50,6 +52,18 @@ router.post(
   authMiddleware(['manager']),
   handleUpload.array('images'),
   uploadPropertyImage
+);
+
+// Lease routes
+router.get(
+  '/:id/leases',
+  authMiddleware(['manager', 'tenant']),
+  getPropertyLeases
+);
+router.get(
+  '/:id/payments',
+  authMiddleware(['manager', 'tenant']),
+  getPropertyPayments
 );
 
 export default router;

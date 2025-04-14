@@ -210,11 +210,31 @@ export function useSupabaseAuth() {
     }
   };
 
+  const confirmPasswordReset = async (token: string, newPassword: string) => {
+    try {
+      dispatch(setLoading(true));
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error confirming password reset:', error);
+      throw error;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
   return {
     signIn,
     signUp,
     signOut,
     resetPassword,
+    confirmPasswordReset,
     isInitialized,
     validateSession,
   };

@@ -125,14 +125,6 @@ const NewProperty = () => {
     try {
       const tempId = `new-${Date.now()}`;
 
-      // Log the files being uploaded
-      console.log(`Uploading ${files.length} files with tempId: ${tempId}`);
-      Array.from(files).forEach((file, index) => {
-        console.log(
-          `File ${index}: ${file.name}, size: ${file.size}, type: ${file.type}`
-        );
-      });
-
       const result = await uploadPropertyImages({
         propertyId: tempId,
         images: Array.from(files),
@@ -141,13 +133,10 @@ const NewProperty = () => {
       if (result && result.imageUrls) {
         setUploadedImages((prev) => [...prev, ...result.imageUrls]);
         toast.success('Images uploaded successfully');
-        console.log('Uploaded images:', result.imageUrls);
       } else {
-        console.error('No image URLs returned in the result', result);
         toast.error('Images uploaded but no URLs returned');
       }
     } catch (error) {
-      console.error('Failed to upload images:', error);
       toast.error('Failed to upload images. Please try again.');
     }
   };
@@ -156,52 +145,11 @@ const NewProperty = () => {
     setUploadedImages(images);
   };
 
-  // Add direct API call function to test connectivity
-  const testServerConnection = async () => {
-    try {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/properties`;
-      toast.loading('Testing API connection...', { id: 'api-test' });
-      console.log('Testing connection to:', apiUrl);
-
-      // Create a small test FormData
-      const testFormData = new FormData();
-      testFormData.append('test', 'value');
-
-      const { data: authSession } = await supabase.auth.getSession();
-      const token = authSession.session?.access_token;
-
-      const response = await axios.post(apiUrl, testFormData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log('API test response:', response);
-      toast.success('API connection successful!', { id: 'api-test' });
-    } catch (error: unknown) {
-      console.error('API connection test failed:', error);
-      toast.error(
-        `API test failed: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-        { id: 'api-test' }
-      );
-    }
-  };
-
   const onSubmit = async (data: PropertyFormData) => {
-    // Add a clear marker when we start submit
-    console.log('=== PROPERTY FORM SUBMISSION STARTED ===');
-
     if (!isAuthenticated || !user?.id) {
       toast.error('No manager ID found. Please log in again.');
       return;
     }
-
-    // Log the entire user object to see what properties are available
-    console.log('User object:', JSON.stringify(user, null, 2));
-    console.log('Form data to be submitted:', JSON.stringify(data, null, 2));
-    console.log('Uploaded images to be sent:', uploadedImages);
 
     // Get current user from Supabase to ensure we have the correct ID
     const { data: userData } = await supabase.auth.getUser();
@@ -260,9 +208,6 @@ const NewProperty = () => {
         highlights: highlightsArray,
       };
 
-      console.log('=== USING JSON PAYLOAD FOR PROPERTY CREATION ===');
-      console.log('Payload:', propertyPayload);
-
       // Get auth token for the request
       const { data: authSession } = await supabase.auth.getSession();
       const token = authSession.session?.access_token;
@@ -279,7 +224,6 @@ const NewProperty = () => {
         }
       );
 
-      console.log('Property creation succeeded:', response.data);
       toast.success('Property created successfully!', {
         id: 'create-property',
       });
@@ -289,8 +233,6 @@ const NewProperty = () => {
         router.push('/managers/properties');
       }, 1000);
     } catch (error: unknown) {
-      console.error('=== ERROR CREATING PROPERTY ===');
-      console.error('Error creating property:', error);
 
       // Log detailed error information
       if (error && typeof error === 'object' && 'response' in error) {
@@ -324,20 +266,9 @@ const NewProperty = () => {
         backButtonDestination="/managers/properties"
       />
       <div className="bg-white rounded-xl p-6">
-        <div className="flex justify-end mb-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={testServerConnection}
-            className="mr-2"
-          >
-            Test API Connection
-          </Button>
-        </div>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit, (errors) => {
-              console.error('Form validation errors:', errors);
               toast.error('Please correct the form errors before submitting');
             })}
             className="p-4 space-y-10"

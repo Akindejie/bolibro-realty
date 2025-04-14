@@ -16,12 +16,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Only set loading to false when we have the auth user info
     if (authUser) {
       const userRole = authUser.userRole?.toLowerCase();
-      console.log('Non-dashboard layout - User role:', userRole);
-      console.log('Current pathname:', pathname);
 
       // Only redirect managers if they're not already on a manager route
       if (userRole === 'manager' && !pathname.includes('/managers/')) {
-        console.log('Redirecting manager to properties page');
         router.push('/managers/properties', { scroll: false });
       } else {
         // Set loading to false for non-managers or managers already on manager routes

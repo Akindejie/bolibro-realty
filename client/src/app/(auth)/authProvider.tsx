@@ -15,6 +15,8 @@ interface AuthContextType {
     name: string
   ) => Promise<any>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<any>;
+  confirmPasswordReset?: (token: string, password: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,8 +33,15 @@ const Auth = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { signIn, signUp, signOut, isInitialized, validateSession } =
-    useSupabaseAuth();
+  const {
+    signIn,
+    signUp,
+    signOut,
+    isInitialized,
+    validateSession,
+    resetPassword,
+    confirmPasswordReset,
+  } = useSupabaseAuth();
   const { user, isAuthenticated, loading } = useAppSelector(
     (state) => state.user
   );
@@ -123,7 +132,9 @@ const Auth = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ signIn, signUp, signOut, resetPassword, confirmPasswordReset }}
+    >
       {children}
     </AuthContext.Provider>
   );

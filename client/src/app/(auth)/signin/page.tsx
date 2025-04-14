@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -52,10 +53,20 @@ export default function SignIn() {
     <div className="flex min-h-screen items-center justify-center bg-primary-50">
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">
-            <span className="text-primary-700">BOLIBRO</span>
-            <span className="text-secondary-500">REALTY</span>
-          </h2>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Image
+              src="/bolibro-logo-black.png"
+              alt="Bolibro Logo"
+              width={60}
+              height={60}
+              style={{ height: 'auto' }}
+              className="object-contain h-[60px] w-auto"
+            />
+            <h2 className="text-3xl font-bold tracking-tight">
+              <span className="text-secondary-500">BOLIBRO </span>
+              <span className="text-sky-900">REALTY</span>
+            </h2>
+          </div>
           <p className="mt-2 text-sm text-gray-600">
             Welcome! Please sign in to continue
           </p>

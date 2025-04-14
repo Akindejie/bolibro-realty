@@ -108,7 +108,6 @@ export const api = createApi({
           // If the user doesn't exist in our database, create them
           if (result.error?.status === 404) {
             try {
-              console.log('Creating new user in database with role:', userRole);
               await createNewUserInDatabase(
                 user,
                 accessToken,
@@ -327,9 +326,13 @@ export const api = createApi({
         console.log('===== CREATE PROPERTY API CALL =====');
         console.log('FormData entries:');
         for (const [key, value] of data.entries()) {
-          console.log(`${key}: ${typeof value === 'string' ? value : '[File or complex data]'}`);
+          console.log(
+            `${key}: ${
+              typeof value === 'string' ? value : '[File or complex data]'
+            }`
+          );
         }
-        
+
         return {
           url: 'properties',
           method: 'POST',
@@ -339,9 +342,7 @@ export const api = createApi({
       invalidatesTags: [{ type: 'Properties', id: 'LIST' }],
       async onQueryStarted(_, { queryFulfilled }) {
         try {
-          console.log('Property creation started');
           const result = await queryFulfilled;
-          console.log('Property creation succeeded:', result);
           toast.success('Property created successfully!');
         } catch (error) {
           console.error('Property creation failed:', error);
@@ -547,7 +548,6 @@ export const api = createApi({
 
         try {
           const result = await queryFulfilled;
-          console.log('Image upload success:', result.data);
           toast.success('Images uploaded successfully', { id: toastId });
         } catch (error: any) {
           console.error('Image upload error:', error);
@@ -564,7 +564,6 @@ export const api = createApi({
               'Server error processing images. Please try again later.';
           }
 
-          console.log('Detailed error message:', errorMessage);
           toast.error(errorMessage, { id: toastId });
         }
       },
@@ -603,7 +602,6 @@ export const api = createApi({
 
           // If online, proceed with the request
           const result = await queryFulfilled;
-          console.log('Image update success:', result.data);
           toast.success('Images updated successfully', { id: toastId });
         } catch (err) {
           if (!navigator.onLine) {
@@ -611,7 +609,6 @@ export const api = createApi({
             return;
           }
 
-          console.error('Failed to update images:', err);
           toast.error('Failed to update images. Please try again.', {
             id: toastId,
           });

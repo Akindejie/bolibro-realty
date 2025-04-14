@@ -21,41 +21,42 @@ import {
 } from '@/state/api';
 import { ArrowDownToLine, Check } from 'lucide-react';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
-import React from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import React, { useEffect } from 'react';
 
 const PropertyPage = () => {
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const refreshParam = searchParams.get('refresh');
   const propertyId = Number(id);
 
-  const { data: property, isLoading: propertyLoading } =
-    useGetPropertyQuery(propertyId);
-  const { data: leases, isLoading: leasesLoading } =
-    useGetPropertyLeasesQuery(propertyId);
-  const { data: payments, isLoading: paymentsLoading } =
-    useGetPaymentsQuery(propertyId);
+  const {
+    data: property,
+    isLoading: propertyLoading,
+    refetch: refetchProperty,
+  } = useGetPropertyQuery(propertyId);
 
-  // Add enhanced debugging for image issues
-  React.useEffect(() => {
-    if (property) {
+  const {
+    data: leases,
+    isLoading: leasesLoading,
+    refetch: refetchLeases,
+  } = useGetPropertyLeasesQuery(propertyId);
 
-      // Check which image property is defined and has values
-      const imageArrays = [
-        { name: 'images', array: property.images },
-        { name: 'photoUrls', array: property.photoUrls },
-        { name: 'photos', array: (property as any).photos },
-      ];
+  const {
+    data: payments,
+    isLoading: paymentsLoading,
+    refetch: refetchPayments,
+  } = useGetPaymentsQuery(propertyId);
 
-      imageArrays.forEach(({ name, array }) => {
-        if (array && Array.isArray(array)) {
-          if (array.length > 0) {
-            console.log(`  - first image: ${array[0]}`);
-            console.log(`  - all images:`, JSON.stringify(array));
-          }
-        }
-      });
+  // Refetch data when refresh parameter is present
+  useEffect(() => {
+    if (refreshParam) {
+      // Refresh all data
+      refetchProperty();
+      refetchLeases();
+      refetchPayments();
     }
-  }, [property]);
+  }, [refreshParam, refetchProperty, refetchLeases, refetchPayments]);
 
   if (propertyLoading || leasesLoading || paymentsLoading) return <Loading />;
 

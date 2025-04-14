@@ -124,10 +124,6 @@ export const CustomFormField: React.FC<FormFieldProps> = ({
                             );
                             // Update using field.onChange to ensure React Hook Form tracks the change
                             field.onChange(newValues.join(','));
-                            console.log(
-                              `Removed ${value}, new values:`,
-                              newValues.join(',')
-                            );
                           }}
                         >
                           <X className="h-3 w-3" />
@@ -142,10 +138,6 @@ export const CustomFormField: React.FC<FormFieldProps> = ({
                   if (newValue && !selectedValues.includes(newValue)) {
                     const newValues = [...selectedValues, newValue];
                     field.onChange(newValues.join(','));
-                    console.log(
-                      `Added ${newValue}, new values:`,
-                      newValues.join(',')
-                    );
                   }
                 }}
               >

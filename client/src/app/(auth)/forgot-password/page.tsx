@@ -5,6 +5,7 @@ import { useAuth } from '@/app/(auth)/authProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -32,10 +33,20 @@ export default function ForgotPassword() {
     <div className="flex min-h-screen items-center justify-center bg-primary-50">
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">
-            <span className="text-primary-700">BOLIBRO</span>
-            <span className="text-secondary-500">REALTY</span>
-          </h2>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Image
+              src="/bolibro-logo-black.png"
+              alt="Bolibro Logo"
+              width={60}
+              height={60}
+              className="object-contain h-[60px] w-auto"
+              style={{ height: 'auto' }}
+            />
+            <h2 className="text-3xl font-bold tracking-tight">
+              <span className="text-secondary-500">BOLIBRO </span>
+              <span className="text-sky-900">REALTY</span>
+            </h2>
+          </div>
           <p className="mt-2 text-sm text-gray-600">
             Forgot your password? No problem!
           </p>

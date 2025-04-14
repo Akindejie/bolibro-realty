@@ -4,13 +4,13 @@ require('dotenv').config();
 import express, { Express } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import helmet from 'helmet';
+// Will use dynamic import for helmet
 import morgan from 'morgan';
-import { authMiddleware } from './middleware/authMiddleware';
 import applicationRoutes from './routes/applicationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 import { ensureBucketsExist } from './config/supabase';
 import { checkDatabaseConnection } from './utils/database';
+import path from 'path';
 
 /* ROUTE IMPORT */
 import tenantRoutes from './routes/tenantRoutes';
@@ -22,23 +22,21 @@ import leaseRoutes from './routes/leaseRoutes';
 const { startPingSchedule } = require('./scripts/ping-supabase');
 
 /* CONFIGURATIONS */
-console.log('Environment variables loaded:');
-console.log('- PORT:', process.env.PORT);
-console.log('- DATABASE_URL defined:', !!process.env.DATABASE_URL);
-console.log('- SUPABASE_URL defined:', !!process.env.SUPABASE_URL);
-console.log(
-  '- SUPABASE_SERVICE_KEY defined:',
-  !!process.env.SUPABASE_SERVICE_KEY
-);
-
 const app: Express = express();
 app.use(express.json());
-app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
+
+// Use dynamic import for helmet
+(async () => {
+  const helmet = await import('helmet');
+  app.use(helmet.default());
+  app.use(helmet.default.crossOriginResourcePolicy({ policy: 'cross-origin' }));
+})();
+
 app.use(morgan('common'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
+app.use(express.static(path.join(__dirname, 'public')));
 
 /* ROUTES */
 app.get('/', (req, res) => {
@@ -84,9 +82,6 @@ async function startServer() {
   try {
     // Check database connectivity before starting server
     const dbConnected = await checkDatabaseConnection();
-    console.log(
-      `Database connection check: ${dbConnected ? 'SUCCESS' : 'FAILED'}`
-    );
 
     // Even if DB check fails, we'll start the server but skip DB pings
     const skipDbPing = !dbConnected;

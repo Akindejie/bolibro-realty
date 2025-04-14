@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
+import { supabase } from '../config/supabase';
 
 /**
  * Creates and verifies necessary Supabase storage buckets exist
