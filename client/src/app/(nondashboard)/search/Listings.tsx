@@ -1,6 +1,6 @@
+import React from 'react';
 import {
   useAddFavoritePropertyMutation,
-  useGetAuthUserQuery,
   useGetPropertiesQuery,
   useGetTenantQuery,
   useRemoveFavoritePropertyMutation,
@@ -8,8 +8,8 @@ import {
 import { useAppSelector } from '@/state/redux';
 import { Property } from '@/types/prismaTypes';
 import Card from '@/components/Card';
-import React from 'react';
 import CardCompact from '@/components/CardCompact';
+import Loading from '@/components/Loading';
 
 const Listings = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
@@ -47,8 +47,8 @@ const Listings = () => {
     }
   };
 
-  if (isLoading) return <>Loading...</>;
-  if (isError || !properties) return <div>Failed to fetch properties</div>;
+  if (isLoading) return <Loading />;
+  if (isError || !properties) return <>Failed to fetch properties</>;
 
   return (
     <div className="w-full">

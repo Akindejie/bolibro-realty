@@ -2,6 +2,7 @@
 
 import SettingsForm from '@/components/SettingsForm';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import Loading from '@/components/Loading';
 import { useUpdateManagerSettingsMutation } from '@/state/api';
 import { useAppSelector } from '@/state/redux';
 import React from 'react';
@@ -12,7 +13,7 @@ const ManagerSettings = () => {
   );
   const [updateManager] = useUpdateManagerSettingsMutation();
 
-  if (loading) return <>Loading...</>;
+  if (loading) return <Loading />;
 
   const initialData = {
     name: user?.name,

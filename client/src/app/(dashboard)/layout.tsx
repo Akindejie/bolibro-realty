@@ -1,14 +1,14 @@
 'use client';
 
+import React from 'react';
 import Navbar from '@/components/Navbar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import Sidebar from '@/components/AppSidebar';
 import { NAVBAR_HEIGHT } from '@/lib/constants';
-import React from 'react';
 import { useGetAuthUserQuery } from '@/state/api';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-
+import Loading from '@/components/Loading';
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { data: authUser, isLoading: authLoading } = useGetAuthUserQuery();
   const router = useRouter();
@@ -42,7 +42,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     }
   }, [authUser, authLoading, router, pathname]);
 
-  if (authLoading || isLoading) return <>Loading...</>;
+  if (authLoading || isLoading) return <Loading />;
   if (!authUser?.userRole) return null;
 
   return (

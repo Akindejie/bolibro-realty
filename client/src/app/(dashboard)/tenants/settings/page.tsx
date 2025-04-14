@@ -2,6 +2,8 @@
 
 import SettingsForm from '@/components/SettingsForm';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import Loading from '@/components/Loading';
+
 import { useUpdateTenantSettingsMutation } from '@/state/api';
 import { useAppSelector } from '@/state/redux';
 import React from 'react';
@@ -12,7 +14,7 @@ const TenantSettings = () => {
   );
   const [updateTenant] = useUpdateTenantSettingsMutation();
 
-  if (loading) return <>Loading...</>;
+  if (loading) return <Loading />;
 
   const initialData = {
     name: user?.name,
