@@ -55,6 +55,23 @@ RUN echo "// Fallback file for Railway" > /app/fallback-server.js && \
     echo "  }" >> /app/fallback-server.js && \
     echo "});" >> /app/fallback-server.js
 
+# Create a minimal health check server
+RUN echo "// Inline health check server" > /app/health-server.js && \
+    echo "const express = require('express');" >> /app/health-server.js && \
+    echo "const app = express();" >> /app/health-server.js && \
+    echo "const PORT = process.env.PORT || 3001;" >> /app/health-server.js && \
+    echo "console.log('Starting health check server on port', PORT);" >> /app/health-server.js && \
+    echo "app.get('/health', (req, res) => {" >> /app/health-server.js && \
+    echo "  console.log('Health check requested at', new Date().toISOString());" >> /app/health-server.js && \
+    echo "  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });" >> /app/health-server.js && \
+    echo "});" >> /app/health-server.js && \
+    echo "app.get('/', (req, res) => {" >> /app/health-server.js && \
+    echo "  res.status(200).json({ status: 'ok', message: 'Health server running' });" >> /app/health-server.js && \
+    echo "});" >> /app/health-server.js && \
+    echo "app.listen(PORT, '0.0.0.0', () => {" >> /app/health-server.js && \
+    echo "  console.log(`Health check server running on port ${PORT}`);" >> /app/health-server.js && \
+    echo "});" >> /app/health-server.js
+
 # Production image
 FROM node:18-alpine
 
@@ -72,12 +89,17 @@ RUN mkdir -p ./dist
 RUN mkdir -p ./node_modules/.prisma
 RUN mkdir -p ./node_modules/@prisma
 
-# Copy server.js, build-debug.js and other essential files
+# Copy server files
 COPY server.js ./server.js
 COPY build-debug.js ./build-debug.js
+COPY simple-server.js ./simple-server.js
+
+# Copy health server file
+COPY --from=builder /app/health-server.js ./health-server.js
 
 # Copy built files from builder with debugging
 RUN echo "Before copying from builder"
+
 # Copy dist directory first if it exists
 COPY --from=builder /app/dist/ ./dist/
 RUN echo "After copying dist:" && ls -la && echo "Dist directory:" && ls -la dist || echo "List failed"
@@ -94,7 +116,13 @@ RUN echo "#!/bin/sh" > start.sh && \
     echo "echo 'Starting server...'" >> start.sh && \
     echo "echo 'Listing current directory:'" >> start.sh && \
     echo "ls -la" >> start.sh && \
-    echo "if [ -d \"./dist\" ]; then" >> start.sh && \
+    echo "# Start health server in the background" >> start.sh && \
+    echo "node health-server.js &" >> start.sh && \
+    echo "echo 'Health server started in background'" >> start.sh && \
+    echo "if [ -f \"./simple-server.js\" ]; then" >> start.sh && \
+    echo "  echo 'Found simple-server.js, starting it'" >> start.sh && \
+    echo "  exec node simple-server.js" >> start.sh && \
+    echo "elif [ -d \"./dist\" ]; then" >> start.sh && \
     echo "  echo 'Found dist directory, contents:'" >> start.sh && \
     echo "  ls -la ./dist" >> start.sh && \
     echo "  if [ -f ./dist/index.js ]; then" >> start.sh && \
