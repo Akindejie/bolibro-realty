@@ -45,20 +45,12 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy server files
-COPY app-server.js ./
-COPY server.js ./
+# No longer copy fallback servers - we want to use the real implementation
+# Make sure we have a health check endpoint for Railway
 COPY health-check.js ./
-
-# Make server.js executable
-RUN chmod +x server.js
-
-# Create /app/server.js as expected by Railway
-RUN mkdir -p /app && cp app-server.js /app/server.js
 
 # Expose port
 EXPOSE 3001
 
-# Start with health-check.js which will handle health checks immediately
-# This should allow the health check to pass while the main server is starting
-CMD ["node", "health-check.js"] 
+# Start with the actual server implementation 
+CMD ["node", "dist/index.js"] 
