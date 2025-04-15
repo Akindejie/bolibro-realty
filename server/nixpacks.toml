@@ -9,16 +9,9 @@ cmds = ["npm ci"]
 
 [phases.build]
 cmds = [
-  "echo 'Current directory:'",
-  "pwd",
-  "echo 'Directory contents:'",
-  "ls -la",
-  "npm run build",
-  "echo 'Ensuring server.js is in the correct location'",
-  "mkdir -p /app",
-  "cp app-server.js /app/server.js 2>/dev/null || cp server.js /app/server.js 2>/dev/null || echo 'Failed to copy to /app/server.js'",
-  "ls -la /app || echo '/app not accessible'"
+  "echo 'Building server...'",
+  "npm run build"
 ]
 
 [start]
-cmd = "node /app/server.js 2>/dev/null || node app-server.js 2>/dev/null || node server.js" 
+cmd = "node /app/server.js 2>/dev/null || node app-server.js 2>/dev/null || node server.js || node dist/index.js" 

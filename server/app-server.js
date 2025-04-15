@@ -1,11 +1,33 @@
-// This file is meant to be placed at /app/server.js
-console.log('Starting from /app/server.js');
+// Self-contained Express server for Railway deployment
+console.log('Starting Bolibro Realty Backend');
 console.log('Current working directory:', process.cwd());
 
 const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Bootstrap: copy this file to /app/server.js if needed
+(function bootstrap() {
+  try {
+    if (!fs.existsSync('/app/server.js')) {
+      console.log('Bootstrapping: Copying this file to /app/server.js');
+
+      // Create /app directory if it doesn't exist
+      if (!fs.existsSync('/app')) {
+        console.log('Creating /app directory');
+        fs.mkdirSync('/app', { recursive: true });
+      }
+
+      // Copy this file to /app/server.js
+      fs.copyFileSync(__filename, '/app/server.js');
+      console.log('Successfully copied to /app/server.js');
+    }
+  } catch (e) {
+    console.error('Failed to bootstrap /app/server.js:', e.message);
+  }
+})();
 
 // Log directory contents for debugging
 try {
@@ -41,10 +63,11 @@ app.get('/', (req, res) => {
     message: 'Bolibro Realty API',
     environment: process.env.NODE_ENV || 'development',
     time: new Date().toISOString(),
+    directory: process.cwd(),
   });
 });
 
-// Health endpoint
+// Health endpoint - respond immediately with OK
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',

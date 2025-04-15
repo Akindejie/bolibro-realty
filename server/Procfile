@@ -1,1 +1,1 @@
-web: node /app/server.js 2>/dev/null || node app-server.js 2>/dev/null || node server.js 
+web: node health-check.js 
