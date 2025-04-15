@@ -1,1 +1,1 @@
-web: find . -type f -name "schema.prisma" && sh setup.sh && npm start 
+web: node dist/index.js 
