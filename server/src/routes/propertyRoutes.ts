@@ -12,6 +12,7 @@ import {
   uploadPropertyImage,
   getPropertyLeases,
   getPropertyPayments,
+  updatePropertyImages,
 } from '../controllers/propertyControllers';
 
 const router = express.Router();
@@ -53,6 +54,9 @@ router.post(
   handleUpload.array('images'),
   uploadPropertyImage
 );
+
+// Add the missing PUT route for updating property images
+router.put('/:id/images', authMiddleware(['manager']), updatePropertyImages);
 
 // Lease routes
 router.get(

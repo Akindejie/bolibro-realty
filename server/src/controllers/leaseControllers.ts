@@ -119,12 +119,62 @@ export const getLeasePayments = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const payments = await prisma.payment.findMany({
-      where: { leaseId: Number(id) },
+    
+    // Validate the lease ID
+    const leaseId = Number(id);
+    if (isNaN(leaseId)) {
+      res.status(400).json({ message: 'Invalid lease ID. Must be a number.' });
+      return;
+    }
+    
+    // Check if the lease exists
+    const lease = await prisma.lease.findUnique({
+      where: { id: leaseId },
+      include: {
+        property: {
+          select: {
+            managerId: true
+          }
+        }
+      }
     });
+
+    if (!lease) {
+      res.status(404).json({ message: 'Lease not found' });
+      return;
+    }
+
+    // Verify authorization
+    const userId = req.user?.id;
+    const userRole = req.user?.role?.toLowerCase();
+    
+    if (!userId || !userRole) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    // Check if the user has permission to access this lease's payments
+    const hasPermission = 
+      (userRole === 'manager' && lease.property.managerId === userId) ||
+      (userRole === 'tenant' && lease.tenantId === userId);
+
+    if (!hasPermission) {
+      res.status(403).json({ message: 'You do not have permission to access these payments' });
+      return;
+    }
+
+    // Find all payments for this lease
+    const payments = await prisma.payment.findMany({
+      where: { leaseId: leaseId }
+    });
+    
     res.json(payments);
   } catch (error: any) {
-    handlePrismaError(error, res, 'getLeases');
+    console.error('Error getting lease payments:', error);
+    res.status(500).json({ 
+      message: 'Error fetching lease payments', 
+      error: error.message 
+    });
   }
 };
 

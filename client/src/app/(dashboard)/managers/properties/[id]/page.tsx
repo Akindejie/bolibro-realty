@@ -42,11 +42,16 @@ const PropertyPage = () => {
     refetch: refetchLeases,
   } = useGetPropertyLeasesQuery(propertyId);
 
+  // Only query payments if we have leases
+  const firstLeaseId = leases && leases.length > 0 ? leases[0].id : undefined;
+
   const {
     data: payments,
     isLoading: paymentsLoading,
     refetch: refetchPayments,
-  } = useGetPaymentsQuery(propertyId);
+  } = useGetPaymentsQuery(firstLeaseId, {
+    skip: !firstLeaseId, // Skip this query if we don't have a lease ID
+  });
 
   // Refetch data when refresh parameter is present
   useEffect(() => {
@@ -54,13 +59,27 @@ const PropertyPage = () => {
       // Refresh all data
       refetchProperty();
       refetchLeases();
-      refetchPayments();
+      if (firstLeaseId) {
+        // Only refetch payments if we have a lease
+        refetchPayments();
+      }
     }
-  }, [refreshParam, refetchProperty, refetchLeases, refetchPayments]);
+  }, [
+    refreshParam,
+    refetchProperty,
+    refetchLeases,
+    refetchPayments,
+    firstLeaseId,
+  ]);
 
-  if (propertyLoading || leasesLoading || paymentsLoading) return <Loading />;
+  // Adjust loading state - don't wait for payments if no leases
+  if (propertyLoading || leasesLoading || (firstLeaseId && paymentsLoading))
+    return <Loading />;
 
   const getCurrentMonthPaymentStatus = (leaseId: number) => {
+    // If we don't have payments yet, always return Not Paid
+    if (!payments) return 'Not Paid';
+
     const currentDate = new Date();
     const currentMonthPayment = payments?.find(
       (payment) =>

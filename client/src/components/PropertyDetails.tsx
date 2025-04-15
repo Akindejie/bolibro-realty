@@ -59,12 +59,15 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
               .unwrap()
               .then(() => {
                 localStorage.removeItem(storedImagesKey);
+                console.log('Successfully synced stored images with server');
               })
               .catch((err) => {
                 console.error('Failed to sync stored images:', err);
+                // Don't remove from localStorage so we can try again later
               });
           }
         } catch (e) {
+          console.error('Error parsing stored images:', e);
           localStorage.removeItem(storedImagesKey);
         }
       } else {
@@ -115,32 +118,31 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         );
 
         // Try to update server
-        updatePropertyImages({
-          propertyId: String(property.id),
-          images: updatedImages,
-        })
-          .unwrap()
-          .then(() => {
-            localStorage.removeItem(`property_${property.id}_images`);
+        try {
+          await updatePropertyImages({
+            propertyId: String(property.id),
+            images: updatedImages,
+          }).unwrap();
 
-            toast.success('Images uploaded successfully');
+          // Successfully updated on server, clear localStorage
+          localStorage.removeItem(`property_${property.id}_images`);
+          toast.success('Images uploaded successfully');
 
-            // Force a page refresh after a short delay to ensure the changes are visible
-            setTimeout(() => {
-              const refreshTimestamp = Date.now();
-              const propertyDetailsUrl = `/managers/properties/${property.id}?refresh=${refreshTimestamp}`;
-              window.location.href = propertyDetailsUrl;
-            }, 800);
-          })
-          .catch((err) => {
-            console.error('Failed to update images on server:', err);
-            // Keep the localStorage backup for later sync
-            toast.success(
-              'Images uploaded but not synced with server. Changes saved locally.'
-            );
-          });
+          // Force a page refresh after a short delay to ensure the changes are visible
+          setTimeout(() => {
+            const refreshTimestamp = Date.now();
+            const propertyDetailsUrl = `/managers/properties/${property.id}?refresh=${refreshTimestamp}`;
+            router.push(propertyDetailsUrl);
+          }, 800);
+        } catch (updateErr) {
+          console.error('Failed to update images on server:', updateErr);
+          // Keep the localStorage backup for later sync
+          toast.success(
+            'Images uploaded but not synced with server. Changes saved locally.'
+          );
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading images:', error);
 
       // Check if it's a specific error with a message from the server
@@ -183,7 +185,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         setTimeout(() => {
           const refreshTimestamp = Date.now();
           const propertyDetailsUrl = `/managers/properties/${property.id}?refresh=${refreshTimestamp}`;
-          window.location.href = propertyDetailsUrl;
+          router.push(propertyDetailsUrl);
         }, 800);
       })
       .catch((err) => {

@@ -1130,21 +1130,70 @@ export const uploadPropertyImage = asyncHandler(
  * @access Private - Managers and tenants
  */
 export const getPropertyLeases = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
   try {
     const propertyId = parseInt(req.params.id, 10);
+    const userId = req.user?.id;
+    const userRole = req.user?.role?.toLowerCase();
+
+    if (!userId || !userRole) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
 
     if (isNaN(propertyId)) {
       res.status(400).json({ message: 'Invalid property ID' });
       return;
     }
 
+    // Check if the property exists
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      select: {
+        id: true,
+        managerId: true,
+      },
+    });
+
+    if (!property) {
+      res.status(404).json({ message: 'Property not found' });
+      return;
+    }
+
+    // Verify authorization based on user role
+    if (userRole === 'manager' && property.managerId !== userId) {
+      res.status(403).json({
+        message: 'You do not have permission to view leases for this property',
+      });
+      return;
+    }
+
+    // For tenants, we need to check if they have a lease for this property
+    if (userRole === 'tenant') {
+      const tenantLease = await prisma.lease.findFirst({
+        where: {
+          propertyId: propertyId,
+          tenantId: userId,
+        },
+      });
+
+      if (!tenantLease) {
+        res.status(403).json({
+          message:
+            'You do not have permission to view leases for this property',
+        });
+        return;
+      }
+    }
+
     // Fetch leases for this property with related tenant information
     const leases = await prisma.lease.findMany({
       where: {
         propertyId: propertyId,
+        // For tenants, only show their own lease
+        ...(userRole === 'tenant' ? { tenantId: userId } : {}),
       },
       include: {
         tenant: {
@@ -1159,9 +1208,12 @@ export const getPropertyLeases = async (
     });
 
     res.status(200).json(leases);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching property leases:', error);
-    res.status(500).json({ message: 'Failed to fetch property leases' });
+    res.status(500).json({
+      message: 'Failed to fetch property leases',
+      error: error.message,
+    });
   }
 };
 
@@ -1222,5 +1274,67 @@ export const getPropertyPayments = async (
   } catch (error) {
     console.error('Error fetching property payments:', error);
     res.status(500).json({ message: 'Failed to fetch property payments' });
+  }
+};
+
+/**
+ * Update property images (rearrange or delete)
+ * @route PUT /api/properties/:id/images
+ * @access Private - Manager only
+ */
+export const updatePropertyImages = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const propertyId = parseInt(req.params.id, 10);
+    const managerId = req.user?.id;
+    const { images } = req.body;
+
+    if (!managerId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    if (!images || !Array.isArray(images)) {
+      res.status(400).json({ message: 'Images array is required' });
+      return;
+    }
+
+    // First check if the property exists and belongs to the manager
+    const property = await prisma.property.findFirst({
+      where: {
+        id: propertyId,
+        managerId,
+      },
+    });
+
+    if (!property) {
+      res.status(404).json({
+        message:
+          'Property not found or you do not have permission to update it',
+      });
+      return;
+    }
+
+    // Update the property with the new image URLs
+    await prisma.property.update({
+      where: { id: propertyId },
+      data: {
+        images: images,
+        photoUrls: images, // Keep both fields synchronized
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Property images updated successfully',
+    });
+  } catch (error: any) {
+    console.error('Error updating property images:', error);
+    res.status(500).json({
+      message: 'Failed to update property images',
+      error: error.message,
+    });
   }
 };
