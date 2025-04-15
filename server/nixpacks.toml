@@ -16,4 +16,4 @@ cmds = [
 ]
 
 [start]
-cmd = "node health-server.js" 
+cmd = "npm start" 
