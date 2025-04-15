@@ -1,0 +1,19 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+*.md
+!README.md
+.vscode
+*.log
+.DS_Store
+dist
+coverage
+temp
+tmp
+
+# Don't ignore these files
+!prisma/schema.prisma
+!app-server.js
+!server.js
+!health-check.js 
