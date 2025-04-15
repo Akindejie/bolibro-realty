@@ -1,0 +1,1 @@
+web: bash -c "chmod +x startup.sh && ./startup.sh" 
