@@ -19,6 +19,9 @@
     "ping-scheduler": "node src/scripts/ping-supabase.js",
     "ping-scheduler-storage": "node src/scripts/ping-supabase.js --skip-db"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

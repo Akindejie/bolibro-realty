@@ -4,7 +4,7 @@
   "description": "Bolibro Realty API",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "chmod +x startup.sh && ./startup.sh || node server.js",
     "dev": "cd server && npm run dev",
     "diagnose": "node diagnose.js"
   },

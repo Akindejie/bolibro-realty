@@ -1,0 +1,1 @@
+web: cp server.js /app/server.js 2>/dev/null || true && node /app/server.js || node server.js 

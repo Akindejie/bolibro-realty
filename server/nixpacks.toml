@@ -17,8 +17,9 @@ cmds = [
   "echo 'Build complete. Contents of dist:'",
   "ls -la dist || echo 'dist directory not found'",
   "echo 'Ensuring server.js is in the correct location'",
-  "cp server.js /app/server.js || echo 'Failed to copy server.js to /app'"
+  "cp server.js /app/server.js || echo 'Failed to copy server.js to /app'",
+  "mkdir -p /app && cp server.js /app/server.js || echo 'Failed second attempt to copy server.js to /app'"
 ]
 
 [start]
-cmd = "node server.js" 
+cmd = "node /app/server.js || node server.js" 
