@@ -16,8 +16,8 @@ cmds = [
   "npm run build",
   "echo 'Build complete. Contents of dist:'",
   "ls -la dist || echo 'dist directory not found'",
-  "echo 'Creating server.js in app root'",
-  "cp index.js server.js"
+  "echo 'Ensuring server.js is in the correct location'",
+  "cp server.js /app/server.js || echo 'Failed to copy server.js to /app'"
 ]
 
 [start]
