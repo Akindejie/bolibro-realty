@@ -12,6 +12,9 @@ RUN npm ci
 # Copy prisma files
 COPY prisma ./prisma/
 
+# 🛠️ Generate Prisma client
+RUN npx prisma generate
+
 # Copy build debug script
 COPY build-debug.js ./
 
@@ -20,6 +23,10 @@ COPY . .
 
 # Build the application
 RUN npm run build
+
+# Check if Prisma client is loaded successfully
+RUN node -e "require('@prisma/client'); console.log('✅ Prisma client loaded successfully')"
+
 
 # Create proper fallback server that includes ping-supabase functionality
 RUN echo '// Fallback server for when the main server fails to build or start\n\
