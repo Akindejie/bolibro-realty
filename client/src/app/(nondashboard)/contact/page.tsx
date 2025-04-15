@@ -203,10 +203,10 @@ const ContactUs = () => {
                         Call Us
                       </p>
                       <a
-                        href="tel:+17701234567"
+                        href="tel:+15138187741"
                         className="text-primary hover:underline"
                       >
-                        +1 (770) 123-4567
+                        +1 (513) 818-7741
                       </a>
                     </div>
                   </div>
@@ -218,9 +218,9 @@ const ContactUs = () => {
                         Office Address
                       </p>
                       <address className="not-italic text-gray-600">
-                        123 Realty Way
+                        Realty Way
                         <br />
-                        Atlanta, GA 30303
+                        Cleveland, Ohio,
                         <br />
                         United States
                       </address>
@@ -234,11 +234,10 @@ const ContactUs = () => {
                         Office Hours
                       </p>
                       <p className="text-gray-600">
-                        Monday to Friday: 9AM - 5PM
+                        Monday to Friday: 9AM - 6PM
                         <br />
-                        Saturday: 10AM - 2PM
+                        Weekend: Closed
                         <br />
-                        Sunday: Closed
                       </p>
                     </div>
                   </div>
