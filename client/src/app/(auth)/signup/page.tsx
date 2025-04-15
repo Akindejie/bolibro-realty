@@ -51,14 +51,16 @@ export default function SignUp() {
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Image
-              src="/bolibro-logo-black.png"
-              alt="Bolibro Logo"
-              width={60}
-              height={60}
-              className="object-contain h-[60px] w-auto"
-              style={{ height: 'auto' }}
-            />
+            <Link href="/">
+              <Image
+                src="/bolibro-logo-black.png"
+                alt="Bolibro Logo"
+                width={60}
+                height={60}
+                className="object-contain h-[60px] w-auto cursor-pointer"
+                style={{ height: 'auto' }}
+              />
+            </Link>
             <h2 className="text-3xl font-bold tracking-tight">
               <span className="text-secondary-500">BOLIBRO </span>
               <span className="text-sky-900">REALTY</span>
