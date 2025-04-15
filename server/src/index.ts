@@ -35,7 +35,21 @@ app.use(express.json());
 app.use(morgan('common'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors());
+
+// Configure CORS to allow requests from Vercel frontend
+app.use(
+  cors({
+    origin: [
+      'http://localhost:3000',
+      'https://bolibro-realty.vercel.app',
+      /\.vercel\.app$/, // Allow all subdomains of vercel.app
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ROUTES */

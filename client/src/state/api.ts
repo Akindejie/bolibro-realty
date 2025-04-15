@@ -14,11 +14,12 @@ import { toast } from 'react-hot-toast';
 import { setUser } from '@/state/userSlice';
 
 // Define API URL from environment variable
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const api = createApi({
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
+    baseUrl: API_URL,
     prepareHeaders: async (headers) => {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
