@@ -8,7 +8,7 @@
     "start:debug": "ls -la && ls -la dist && node dist/index.js",
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc -p tsconfig.json || (echo 'TypeScript compilation failed, retrying...' && rm -rf dist && tsc -p tsconfig.json)",
-    "postinstall": "npx prisma generate && npx prisma migrate deploy",
+    "postinstall": "if [ -f ./prisma/schema.prisma ]; then npx prisma generate --schema=./prisma/schema.prisma && npx prisma migrate deploy --schema=./prisma/schema.prisma; else echo 'Skipping Prisma commands, schema not found'; fi",
     "lint": "eslint . --ext .ts",
     "seed": "ts-node prisma/seed.ts",
     "test-supabase": "node src/scripts/test-supabase.js",

@@ -5,7 +5,7 @@ nixPkgs = ["nodejs", "nodejs.pkgs.typescript"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npx prisma generate", "npm run build"]
+cmds = ["ls -la", "ls -la prisma || mkdir -p prisma", "npx prisma generate --schema=./prisma/schema.prisma", "npm run build"]
 
 [start]
 cmd = "npm start" 

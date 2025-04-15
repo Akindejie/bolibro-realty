@@ -3,8 +3,17 @@
 # Create a directory listing to debug what's been built
 echo "Directory contents:"
 ls -la
-echo "dist directory contents:"
-ls -la dist || echo "dist directory not found"
+echo "prisma directory contents:"
+ls -la prisma || echo "prisma directory not found"
+
+# Check if the schema exists
+if [ ! -f prisma/schema.prisma ]; then
+  echo "ERROR: Prisma schema file not found!"
+  
+  # Look for it elsewhere
+  echo "Searching for schema.prisma file:"
+  find . -name "schema.prisma" -type f
+fi
 
 # Copy the Procfile if it's not there
 if [ ! -f Procfile ]; then
@@ -18,9 +27,13 @@ if [ ! -d node_modules ]; then
   npm ci
 fi
 
-# Make sure Prisma client is generated
-echo "Generating Prisma client"
-npx prisma generate
+# Make sure Prisma client is generated if schema exists
+if [ -f prisma/schema.prisma ]; then
+  echo "Generating Prisma client"
+  npx prisma generate --schema=./prisma/schema.prisma
+else
+  echo "WARNING: Skipping Prisma generation, schema not found"
+fi
 
 # Make sure TypeScript is compiled
 if [ ! -d dist ] || [ ! -f dist/index.js ]; then

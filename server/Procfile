@@ -1,1 +1,1 @@
-web: bash setup.sh && npm start 
+web: find . -type f -name "schema.prisma" && bash setup.sh && npm start 
