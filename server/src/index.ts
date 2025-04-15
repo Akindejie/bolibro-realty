@@ -18,8 +18,9 @@ import managerRoutes from './routes/managerRoutes';
 import propertyRoutes from './routes/propertyRoutes';
 import leaseRoutes from './routes/leaseRoutes';
 
-// Import the database ping scheduler with skip-db flag
-const { startPingSchedule } = require('./scripts/ping-supabase');
+// Import the database ping scheduler with skip-db flag - use require for JS files
+const pingSupabase = require('./scripts/ping-supabase.js');
+const { startPingSchedule } = pingSupabase;
 
 /* CONFIGURATIONS */
 const app: Express = express();

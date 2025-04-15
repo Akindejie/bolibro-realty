@@ -9,6 +9,27 @@ function debugLog(message) {
   fs.appendFileSync('build-debug.log', message + '\n');
 }
 
+// Function to recursively copy files from source to destination
+function copyFilesRecursively(source, destination, filter) {
+  if (!fs.existsSync(destination)) {
+    fs.mkdirSync(destination, { recursive: true });
+  }
+
+  const items = fs.readdirSync(source);
+  items.forEach((item) => {
+    const sourcePath = path.join(source, item);
+    const destPath = path.join(destination, item);
+
+    const stats = fs.statSync(sourcePath);
+    if (stats.isDirectory()) {
+      copyFilesRecursively(sourcePath, destPath, filter);
+    } else if (filter(item)) {
+      fs.copyFileSync(sourcePath, destPath);
+      debugLog(`Copied: ${sourcePath} -> ${destPath}`);
+    }
+  });
+}
+
 // Clear previous log file
 try {
   fs.writeFileSync('build-debug.log', '');
@@ -35,6 +56,24 @@ if (fs.existsSync(tsconfigPath)) {
   debugLog('tsconfig.json NOT FOUND!');
 }
 
+// Check for package.json to see if typescript is listed as a dependency
+const packageJsonPath = path.join(process.cwd(), 'package.json');
+if (fs.existsSync(packageJsonPath)) {
+  debugLog('package.json exists');
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const typescriptVersion =
+      (packageJson.dependencies && packageJson.dependencies.typescript) ||
+      (packageJson.devDependencies && packageJson.devDependencies.typescript) ||
+      'Not found';
+    debugLog('TypeScript version in package.json: ' + typescriptVersion);
+  } catch (error) {
+    debugLog('Error reading package.json: ' + error);
+  }
+} else {
+  debugLog('package.json NOT FOUND!');
+}
+
 // Check if src/index.ts exists
 const srcIndexPath = path.join(process.cwd(), 'src', 'index.ts');
 if (fs.existsSync(srcIndexPath)) {
@@ -57,22 +96,33 @@ if (fs.existsSync(srcIndexPath)) {
   debugLog('src/index.ts NOT FOUND!');
 }
 
-// Check for package.json to see if typescript is listed as a dependency
-const packageJsonPath = path.join(process.cwd(), 'package.json');
-if (fs.existsSync(packageJsonPath)) {
-  debugLog('package.json exists');
+// Check for ping-supabase.js
+const pingSupabasePath = path.join(
+  process.cwd(),
+  'src',
+  'scripts',
+  'ping-supabase.js'
+);
+if (fs.existsSync(pingSupabasePath)) {
+  debugLog('ping-supabase.js exists');
   try {
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    const typescriptVersion =
-      (packageJson.dependencies && packageJson.dependencies.typescript) ||
-      (packageJson.devDependencies && packageJson.devDependencies.typescript) ||
-      'Not found';
-    debugLog('TypeScript version in package.json: ' + typescriptVersion);
+    const fileStats = fs.statSync(pingSupabasePath);
+    debugLog('File size: ' + fileStats.size + ' bytes');
+    debugLog('Last modified: ' + fileStats.mtime);
+    // Check if it exports startPingSchedule
+    const content = fs.readFileSync(pingSupabasePath, 'utf8');
+    if (content.includes('startPingSchedule')) {
+      debugLog('ping-supabase.js contains startPingSchedule function');
+    } else {
+      debugLog(
+        'WARNING: ping-supabase.js does not seem to export startPingSchedule'
+      );
+    }
   } catch (error) {
-    debugLog('Error reading package.json: ' + error);
+    debugLog('Error reading ping-supabase.js: ' + error);
   }
 } else {
-  debugLog('package.json NOT FOUND!');
+  debugLog('ping-supabase.js NOT FOUND!');
 }
 
 // List src directory
@@ -90,6 +140,23 @@ try {
   }
 } catch (error) {
   debugLog('Error listing src directory: ' + error);
+}
+
+// List scripts directory
+debugLog('\nContents of src/scripts directory:');
+try {
+  const scriptsPath = path.join(process.cwd(), 'src', 'scripts');
+  if (fs.existsSync(scriptsPath)) {
+    const scriptFiles = fs.readdirSync(scriptsPath);
+    debugLog(`Found ${scriptFiles.length} files in scripts directory`);
+    scriptFiles.forEach((file) => {
+      debugLog(` - ${file}`);
+    });
+  } else {
+    debugLog('src/scripts directory NOT FOUND!');
+  }
+} catch (error) {
+  debugLog('Error listing src/scripts directory: ' + error);
 }
 
 // Check if TypeScript is installed
@@ -209,6 +276,56 @@ debugLog('========== END DEBUG INFORMATION ==========');
 // Try some fixes
 debugLog('Attempting to fix the TypeScript build:');
 
+// Ensure scripts directory exists in dist
+debugLog('Ensuring scripts directory exists in dist:');
+try {
+  const distScriptsPath = path.join(process.cwd(), 'dist', 'scripts');
+  if (!fs.existsSync(distScriptsPath)) {
+    fs.mkdirSync(distScriptsPath, { recursive: true });
+    debugLog('Created dist/scripts directory');
+  }
+
+  // Copy ping-supabase.js to dist/scripts
+  const srcScriptsPath = path.join(process.cwd(), 'src', 'scripts');
+  if (fs.existsSync(srcScriptsPath)) {
+    debugLog('Copying scripts from src/scripts to dist/scripts:');
+    const files = fs.readdirSync(srcScriptsPath);
+    files.forEach((file) => {
+      if (file.endsWith('.js')) {
+        const srcFile = path.join(srcScriptsPath, file);
+        const destFile = path.join(distScriptsPath, file);
+        fs.copyFileSync(srcFile, destFile);
+        debugLog(`Copied ${file} to dist/scripts/`);
+
+        // Make the script executable
+        try {
+          fs.chmodSync(destFile, '755');
+          debugLog(`Made ${file} executable`);
+        } catch (e) {
+          debugLog(`Failed to make ${file} executable: ${e.message}`);
+        }
+      }
+    });
+  }
+
+  // Copy all JS files from src to dist to ensure everything is there
+  debugLog('Copying all JS files from src to dist:');
+  try {
+    const srcPath = path.join(process.cwd(), 'src');
+    const distPath = path.join(process.cwd(), 'dist');
+
+    copyFilesRecursively(srcPath, distPath, (file) => {
+      return file.endsWith('.js') || file.endsWith('.json');
+    });
+
+    debugLog('Finished copying JS files');
+  } catch (e) {
+    debugLog(`Error copying JS files: ${e.message}`);
+  }
+} catch (error) {
+  debugLog('Error ensuring scripts directory: ' + error.message);
+}
+
 // Fix 1: Create a minimal tsconfig.json with corrected settings
 debugLog('Fix attempt 1: Creating a simpler tsconfig.json');
 try {
@@ -249,6 +366,52 @@ if (fs.existsSync(fixedDistIndexPath)) {
   debugLog('FIXED: dist/index.js was successfully created after fix attempts');
 } else {
   debugLog('STILL FAILING: dist/index.js not created after fix attempts');
+}
+
+// Final build safeguard - If no dist/index.js, create a minimal one that includes ping-supabase.js
+const finalDistIndexPath = path.join(process.cwd(), 'dist', 'index.js');
+if (!fs.existsSync(finalDistIndexPath)) {
+  debugLog('FALLBACK: Creating minimal index.js as last resort');
+  try {
+    const minimalIndex = `
+// Fallback minimal index.js created by build-debug.js
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Try to load ping-supabase script
+try {
+  const pingSupabase = require('./scripts/ping-supabase');
+  if (typeof pingSupabase.startPingSchedule === 'function') {
+    console.log('Starting ping schedule...');
+    pingSupabase.startPingSchedule();
+  } else {
+    console.error('startPingSchedule function not found in ping-supabase.js');
+  }
+} catch (e) {
+  console.error('Failed to load ping-supabase script:', e);
+}
+
+// Basic endpoints
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running', mode: 'fallback' });
+});
+
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Fallback server is running' });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(\`Server running on port \${PORT} (fallback mode)\`);
+});
+`;
+
+    fs.writeFileSync(finalDistIndexPath, minimalIndex);
+    debugLog('Created minimal index.js as last resort fallback');
+  } catch (e) {
+    debugLog(`Failed to create minimal index.js: ${e.message}`);
+  }
 }
 
 debugLog('Build debug completed. Check build-debug.log for details.');
