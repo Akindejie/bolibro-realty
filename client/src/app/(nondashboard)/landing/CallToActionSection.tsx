@@ -38,8 +38,7 @@ const CallToActionSection = () => {
         </h2>
 
         <p className="text-lg md:text-xl text-center max-w-2xl mx-auto mb-10 text-white">
-          Discover a wide range of properties in your desired location. Let us
-          help you find the perfect property for your needs.
+          Discover a wide range of properties in your desired location.
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
