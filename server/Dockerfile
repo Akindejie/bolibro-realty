@@ -72,6 +72,10 @@ RUN mkdir -p ./dist
 RUN mkdir -p ./node_modules/.prisma
 RUN mkdir -p ./node_modules/@prisma
 
+# Copy server.js, build-debug.js and other essential files
+COPY server.js ./server.js
+COPY build-debug.js ./build-debug.js
+
 # Copy built files from builder with debugging
 RUN echo "Before copying from builder"
 # Copy dist directory first if it exists
@@ -98,11 +102,11 @@ RUN echo "#!/bin/sh" > start.sh && \
     echo "    exec node dist/index.js" >> start.sh && \
     echo "  else" >> start.sh && \
     echo "    echo 'dist/index.js not found, using fallback server'" >> start.sh && \
-    echo "    exec node fallback-server.js" >> start.sh && \
+    echo "    exec node server.js" >> start.sh && \
     echo "  fi" >> start.sh && \
     echo "else" >> start.sh && \
     echo "  echo 'dist directory not found, using fallback server'" >> start.sh && \
-    echo "  exec node fallback-server.js" >> start.sh && \
+    echo "  exec node server.js" >> start.sh && \
     echo "fi" >> start.sh && \
     chmod +x start.sh
 
