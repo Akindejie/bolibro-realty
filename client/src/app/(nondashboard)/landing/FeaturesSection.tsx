@@ -46,15 +46,15 @@ const FeaturesSection = () => {
                 title={
                   [
                     'Trustworthy and Verified Listings',
-                    'Browse Realty Listings with Ease',
-                    'Simplify Your Realty Search with Advanced',
+                    'Browse Available Listings with Ease',
+                    'Simplify Your Search with Advanced',
                   ][index]
                 }
                 description={
                   [
-                    'Discover the best realty options with user reviews and ratings.',
-                    'Get access to user reviews and ratings for a better understanding of realty options.',
-                    'Find trustworthy and verified realty listings to ensure a hassle-free experience.',
+                    'Discover the best options with user reviews and ratings.',
+                    'Get access to user reviews and ratings for a better understanding of options.',
+                    'Find trustworthy and verified listings to ensure a hassle-free experience.',
                   ][index]
                 }
                 linkText={['Explore', 'Search', 'Discover'][index]}

@@ -3,8 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { FadeInSection } from '@/components/FadeInSection';
-import { Search, CalendarDays, Home } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -33,12 +31,12 @@ const DiscoverSection = () => {
       <div className="max-w-6xl xl:max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16">
         <motion.div variants={itemVariants} className="my-12 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-center">
-            Find your Dream Realty Property Today!
+            Find your Dream Property Today!
           </h2>
           <p className="text-lg text-center max-w-2xl mx-auto mb-12">
-            Searching for your dream realty property has never been easier. With
-            our extensive database and user-friendly platform, you can find your
-            dream realty property!
+            Searching for your dream property has never been easier. With our
+            extensive database and user-friendly platform, you can find your
+            dream property!
           </p>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 xl:gap-16 text-center">
@@ -47,19 +45,19 @@ const DiscoverSection = () => {
               imageSrc: '/landing-icon-wand.png',
               title: 'Search for Properties',
               description:
-                'Browse through our extensive collection of realty properties in your desired location.',
+                'Browse through our extensive collection of properties in your desired location.',
             },
             {
               imageSrc: '/landing-icon-calendar.png',
-              title: 'Book Your Realty',
+              title: 'Book Your Dream Property',
               description:
-                "Once you've found the perfect realty property, easily book it online with just a few clicks.",
+                "Once you've found the perfect property, easily book it online with just a few clicks.",
             },
             {
               imageSrc: '/landing-icon-heart.png',
               title: 'Enjoy your New Home',
               description:
-                'Move into your new realty property and start enjoying your dream home.',
+                'Move into your new property and start enjoying your dream home.',
             },
           ].map((card, index) => (
             <motion.div key={index} variants={itemVariants}>

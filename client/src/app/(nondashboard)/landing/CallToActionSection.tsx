@@ -34,12 +34,12 @@ const CallToActionSection = () => {
         className="relative z-20 flex flex-col items-center justify-center h-full max-w-4xl xl:max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16"
       >
         <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-center text-white leading-tight">
-          Find Your Dream Realty Property
+          Find Your Dream Property
         </h2>
 
         <p className="text-lg md:text-xl text-center max-w-2xl mx-auto mb-10 text-white">
-          Discover a wide range of realty properties in your desired location.
-          Let us help you find the perfect property for your needs.
+          Discover a wide range of properties in your desired location. Let us
+          help you find the perfect property for your needs.
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
