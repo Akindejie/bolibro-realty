@@ -10,8 +10,10 @@ cmds = ["npm ci"]
 [phases.build]
 cmds = [
   "echo 'Building server...'",
-  "npm run build"
+  "npm run build",
+  "echo 'Build output:'",
+  "ls -la dist || echo 'dist directory not found or empty'"
 ]
 
 [start]
-cmd = "node /app/server.js 2>/dev/null || node app-server.js 2>/dev/null || node server.js || node dist/index.js" 
+cmd = "node server.js" 
