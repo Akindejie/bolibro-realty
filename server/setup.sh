@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Create a directory listing to debug what's been built
 echo "Directory contents:"

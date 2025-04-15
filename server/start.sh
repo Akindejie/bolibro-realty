@@ -1,9 +1,23 @@
-#!/bin/bash
+#!/bin/sh
 
 # Print environment for debugging
 echo "Starting application..."
 echo "Directory contents:"
 ls -la
+
+# Check if dist/index.js exists
+if [ ! -f dist/index.js ]; then
+  echo "WARNING: dist/index.js not found, using fallback server"
+  
+  # Check if fallback exists
+  if [ -f index.js ]; then
+    echo "Starting fallback server..."
+    exec node index.js
+  else
+    echo "ERROR: No server found to start!"
+    exit 1
+  fi
+fi
 
 # Check if DATABASE_URL is set
 if [ -z "$DATABASE_URL" ]; then
@@ -22,4 +36,4 @@ fi
 
 # Start the application
 echo "Starting Node.js application..."
-node dist/index.js 
+exec node dist/index.js 

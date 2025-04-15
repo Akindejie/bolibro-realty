@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Print environment for debugging
 echo "PWD: $(pwd)"
