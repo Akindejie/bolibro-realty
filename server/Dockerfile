@@ -86,27 +86,8 @@ app.listen(PORT, () => {\n\
 });\n\
 ' > /app/fallback-server.js
 
-# Create startup script that tries main server first, falls back to fallback server
-RUN echo '#!/bin/sh\n\
-\n\
-# First, check if main server exists\n\
-if [ -f /app/dist/index.js ]; then\n\
-  echo "Starting main server..."\n\
-  node /app/dist/index.js\n\
-elif [ -f /app/server.js ]; then\n\
-  echo "Starting server.js..."\n\
-  node /app/server.js\n\
-else\n\
-  echo "Main server not found. Starting fallback server..."\n\
-  node /app/fallback-server.js\n\
-fi\n\
-' > /app/start.sh
-
-# Make startup script executable
-RUN chmod +x /app/start.sh
-
 # Copy ping-supabase.js to another location as backup
 RUN mkdir -p /app/scripts && cp -f /app/src/scripts/ping-supabase.js /app/scripts/ || echo "Could not copy ping-supabase.js (but will continue)"
 
-# Command to run the application
-CMD ["/app/start.sh"] 
+# Set container entry point to use npm start
+CMD ["npm", "start"]
