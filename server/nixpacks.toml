@@ -14,12 +14,11 @@ cmds = [
   "echo 'Directory contents:'",
   "ls -la",
   "npm run build",
-  "echo 'Build complete. Contents of dist:'",
-  "ls -la dist || echo 'dist directory not found'",
   "echo 'Ensuring server.js is in the correct location'",
-  "cp server.js /app/server.js || echo 'Failed to copy server.js to /app'",
-  "mkdir -p /app && cp server.js /app/server.js || echo 'Failed second attempt to copy server.js to /app'"
+  "mkdir -p /app",
+  "cp app-server.js /app/server.js 2>/dev/null || cp server.js /app/server.js 2>/dev/null || echo 'Failed to copy to /app/server.js'",
+  "ls -la /app || echo '/app not accessible'"
 ]
 
 [start]
-cmd = "node /app/server.js || node server.js" 
+cmd = "node /app/server.js 2>/dev/null || node app-server.js 2>/dev/null || node server.js" 
