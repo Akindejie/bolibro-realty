@@ -71,3 +71,4 @@ railway open
 
 - View logs: `railway logs`
 - Check service status: `railway status`
+ 
