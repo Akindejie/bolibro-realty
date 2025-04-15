@@ -23,12 +23,17 @@ COPY . .
 
 # Debug content after copying
 RUN echo "Contents after full copy:" && ls -la
+RUN echo "Contents of src directory:" && ls -la src
 
 # Generate Prisma client
 RUN echo "Generating Prisma client..." && npx prisma generate --schema=./prisma/schema.prisma
 
-# Build TypeScript code
-RUN npm run build
+# Build TypeScript code with more verbose output
+RUN echo "Starting TypeScript build..." && \
+    npm run build && \
+    echo "Build completed, checking dist directory:" && \
+    ls -la dist || echo "dist directory not found or empty" && \
+    if [ -d "dist" ]; then echo "Content of dist:"; ls -la dist; else echo "No dist directory created"; fi
 
 # Create a fallback server file just in case
 RUN echo "// Fallback file for Railway" > /app/fallback-server.js && \
@@ -62,20 +67,41 @@ COPY prisma ./prisma/
 # Install production dependencies only
 RUN npm ci --only=production
 
-# Copy built files from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Create directories first
+RUN mkdir -p ./dist
+RUN mkdir -p ./node_modules/.prisma
+RUN mkdir -p ./node_modules/@prisma
+
+# Copy built files from builder with debugging
+RUN echo "Before copying from builder"
+# Copy dist directory first if it exists
+COPY --from=builder /app/dist/ ./dist/
+RUN echo "After copying dist:" && ls -la && echo "Dist directory:" && ls -la dist || echo "List failed"
+
+# Copy Prisma modules
+COPY --from=builder /app/node_modules/.prisma/ ./node_modules/.prisma/
+COPY --from=builder /app/node_modules/@prisma/ ./node_modules/@prisma/
+
+# Copy fallback server
 COPY --from=builder /app/fallback-server.js ./fallback-server.js
 
 # Create a startup script that will try the main server first, then fallback
 RUN echo "#!/bin/sh" > start.sh && \
     echo "echo 'Starting server...'" >> start.sh && \
-    echo "if [ -f ./dist/index.js ]; then" >> start.sh && \
-    echo "  echo 'Found dist/index.js, starting main server'" >> start.sh && \
-    echo "  exec node dist/index.js" >> start.sh && \
+    echo "echo 'Listing current directory:'" >> start.sh && \
+    echo "ls -la" >> start.sh && \
+    echo "if [ -d \"./dist\" ]; then" >> start.sh && \
+    echo "  echo 'Found dist directory, contents:'" >> start.sh && \
+    echo "  ls -la ./dist" >> start.sh && \
+    echo "  if [ -f ./dist/index.js ]; then" >> start.sh && \
+    echo "    echo 'Found dist/index.js, starting main server'" >> start.sh && \
+    echo "    exec node dist/index.js" >> start.sh && \
+    echo "  else" >> start.sh && \
+    echo "    echo 'dist/index.js not found, using fallback server'" >> start.sh && \
+    echo "    exec node fallback-server.js" >> start.sh && \
+    echo "  fi" >> start.sh && \
     echo "else" >> start.sh && \
-    echo "  echo 'dist/index.js not found, using fallback server'" >> start.sh && \
+    echo "  echo 'dist directory not found, using fallback server'" >> start.sh && \
     echo "  exec node fallback-server.js" >> start.sh && \
     echo "fi" >> start.sh && \
     chmod +x start.sh
