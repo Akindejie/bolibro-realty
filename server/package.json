@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
+    "start:debug": "ls -la && ls -la dist && node dist/index.js",
     "dev": "nodemon --exec ts-node src/index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json || (echo 'TypeScript compilation failed, retrying...' && rm -rf dist && tsc -p tsconfig.json)",
     "postinstall": "npx prisma generate && npx prisma migrate deploy",
     "lint": "eslint . --ext .ts",
     "seed": "ts-node prisma/seed.ts",

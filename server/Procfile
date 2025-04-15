@@ -1,1 +1,1 @@
-web: npm start 
+web: bash setup.sh && npm start 
