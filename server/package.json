@@ -10,7 +10,6 @@
     "build": "node build-debug.js && echo 'Creating simpler tsconfig.json...' && node -e \"const fs=require('fs'); const config={compilerOptions:{target:'es2016',module:'commonjs',esModuleInterop:true,strict:true,skipLibCheck:true,outDir:'./dist',rootDir:'./src'},include:['src/**/*', 'src/scripts/**/*']}; fs.writeFileSync('tsconfig.simple.json',JSON.stringify(config,null,2));\" && echo 'Building with simple TypeScript config...' && (npx tsc -p tsconfig.simple.json || (echo 'Main build failed, trying fallback file...' && npx tsc --outDir ./dist src/fallback.ts)) && echo 'TypeScript build completed' && ls -la dist && echo 'dist directory contents:' && ls -la dist || echo 'dist directory missing or empty'",
     "postinstall": "ls -la && echo 'Checking for schema.prisma' && if [ -f ./prisma/schema.prisma ]; then echo 'Found schema.prisma, generating client'; npx prisma generate --schema=./prisma/schema.prisma; else echo 'ERROR: schema.prisma not found'; pwd; ls -la; ls -la ./prisma || echo 'prisma dir not found'; fi",
     "lint": "eslint . --ext .ts",
-    "seed": "ts-node prisma/seed.ts",
     "test-supabase": "node src/scripts/test-supabase.js",
     "migrate-images": "ts-node src/scripts/migrateImagesToSupabase.ts",
     "create-buckets": "node src/scripts/create-supabase-buckets.js",
