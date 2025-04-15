@@ -47,7 +47,7 @@ const FeaturesSection = () => {
                   [
                     'Trustworthy and Verified Listings',
                     'Browse Available Listings with Ease',
-                    'Simplify Your Search with Advanced',
+                    'Sign up today and get access to our wide range of properties',
                   ][index]
                 }
                 description={
