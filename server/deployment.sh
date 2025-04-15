@@ -34,13 +34,8 @@ npm ci
 # Generate Prisma client if schema exists
 if [ -f prisma/schema.prisma ]; then
   echo "Generating Prisma client"
+  # Only generate Prisma client during build, skip migrations
   npx prisma generate --schema=./prisma/schema.prisma
-  
-  # Run migrations if necessary
-  if [ "$NODE_ENV" = "production" ]; then
-    echo "Running database migrations"
-    npx prisma migrate deploy --schema=./prisma/schema.prisma
-  fi
 else
   echo "WARNING: Skipping Prisma generation, schema not found"
 fi
