@@ -60,21 +60,49 @@ const AboutUs = () => {
               <h3 className="text-xl font-semibold text-gray-900 mb-3">
                 Our Values
               </h3>
-              <p className="text-gray-700 leading-relaxed">
-                Our commitment is rooted in loyalty, trust, and exceptional
-                service. We go above and beyond to provide the highest quality
-                of care, offering personalized attention to every guest —
-                because your comfort and well-being matter to us.
+              <p className="text-gray-700 leading-relaxed mb-4">
+                At Bolibro Realty, we stand by:
+              </p>
+              <ul className="list-disc pl-5 text-gray-700 space-y-2">
+                <li>Integrity – Honest, transparent service you can trust</li>
+                <li>Comfort – Spaces that feel like home, every time</li>
+                <li>
+                  Commitment – Consistent care for every guest and property
+                </li>
+                <li>Respect – Valuing your time, privacy, and needs</li>
+                <li>Excellence – High standards in everything we do</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                These values shape how we serve—and why our guests keep coming
+                back.
               </p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-xl font-semibold text-gray-900 mb-3">
                 Our Promise
               </h3>
-              <p className="text-gray-700 leading-relaxed">
-                Welcome to Bolibro Realty — where your peace of mind is our
-                priority. We are committed to maintaining the highest standards
-                in property management and tenant satisfaction.
+              <p className="text-gray-700 leading-relaxed mb-4">
+                At Bolibro Realty, our promise is simple: to treat every guest
+                like family. We are committed to providing safe, clean, and
+                thoughtfully maintained homes that deliver comfort, peace of
+                mind, and exceptional value.
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-3">
+                Whether you&apos;re staying with us for a few nights or a few
+                years, you can count on:
+              </p>
+              <ul className="list-disc pl-5 text-gray-700 space-y-2">
+                <li>
+                  Comfortable, fully-equipped spaces tailored to your needs
+                </li>
+                <li>Reliable and responsive support whenever you need us</li>
+                <li>Transparent communication and honest service</li>
+                <li>Respect for your privacy and peace of mind</li>
+                <li>A welcoming home you&apos;ll never want to leave</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                Your trust means everything to us—and we&apos;ll go above and
+                beyond to earn it, every single day.
               </p>
             </div>
           </div>
