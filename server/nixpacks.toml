@@ -1,11 +1,24 @@
+[variables]
+NODE_ENV = "production"
+
 [phases.setup]
-nixPkgs = ["nodejs", "nodejs.pkgs.typescript"]
+aptPkgs = ["nodejs"]
 
 [phases.install]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["ls -la", "ls -la prisma || mkdir -p prisma", "npx prisma generate --schema=./prisma/schema.prisma", "npm run build"]
+cmds = [
+  "echo 'Current directory:'",
+  "pwd",
+  "echo 'Directory contents:'",
+  "ls -la",
+  "npm run build",
+  "echo 'Build complete. Contents of dist:'",
+  "ls -la dist || echo 'dist directory not found'",
+  "echo 'Creating server.js in app root'",
+  "cp index.js server.js"
+]
 
 [start]
-cmd = "npm start" 
+cmd = "node server.js" 
