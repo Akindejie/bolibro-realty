@@ -71,7 +71,7 @@ const Navbar = () => {
               />
               <div className="text-xl font-bold">
                 BOLIBRO
-                <span className="text-secondary-500 font-light hover:!text-primary-300">
+                <span className="text-secondary-500 font-light hover:!text-primary-300 hidden md:inline">
                   REALTY
                 </span>
               </div>
