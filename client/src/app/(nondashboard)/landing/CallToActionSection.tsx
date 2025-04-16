@@ -44,14 +44,14 @@ const CallToActionSection = () => {
         <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
           <button
             onClick={handleSearch}
-            className="inline-block text-primary-700 bg-white rounded-lg px-8 py-4 font-semibold hover:bg-primary-500 hover:text-primary-50 transition-colors duration-300 shadow-lg"
+            className="inline-block text-primary-700 bg-white rounded-lg px-8 py-4 font-semibold hover:bg-primary-500 hover:text-primary-50 transition-colors duration-300 shadow-lg text-center"
           >
             Search Properties
           </button>
           {!isAuthenticated && (
             <Link
               href="/signup"
-              className="inline-block text-white bg-secondary-500 rounded-lg px-8 py-4 font-semibold hover:bg-secondary-600 transition-colors duration-300 shadow-lg"
+              className="inline-block text-white bg-secondary-500 rounded-lg px-8 py-4 font-semibold hover:bg-secondary-600 transition-colors duration-300 shadow-lg text-center"
               scroll={false}
             >
               Sign Up

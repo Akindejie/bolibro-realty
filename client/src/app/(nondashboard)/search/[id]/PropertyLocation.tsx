@@ -71,10 +71,16 @@ const PropertyLocation = ({ propertyId }: PropertyDetailsProps) => {
           Get Directions
         </a>
       </div>
-      <div
-        className="relative mt-4 h-[300px] rounded-lg overflow-hidden"
-        ref={mapContainerRef}
-      />
+      <div className="w-full sm:basis-5/12 grow relative rounded-xl">
+        <div
+          className="map-container rounded-xl"
+          ref={mapContainerRef}
+          style={{
+            height: '100%',
+            width: '100%',
+          }}
+        />
+      </div>
     </div>
   );
 };

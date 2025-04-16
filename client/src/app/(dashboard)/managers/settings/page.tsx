@@ -22,8 +22,13 @@ const ManagerSettings = () => {
   };
 
   const handleSubmit = async (data: typeof initialData) => {
+    if (!user?.id) {
+      console.error('User ID is missing');
+      return;
+    }
+
     await updateManager({
-      id: user?.id,
+      id: user.id,
       ...data,
     });
   };

@@ -5,6 +5,7 @@ import { formatEnumString } from '@/lib/utils';
 import { useGetPropertyQuery } from '@/state/api';
 import { HelpCircle } from 'lucide-react';
 import Loading from '@/components/Loading';
+
 const PropertyDetails = ({ propertyId }: PropertyDetailsProps) => {
   const {
     data: property,

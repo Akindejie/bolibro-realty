@@ -104,19 +104,19 @@ const HeroSection = () => {
             Explore our wide range of realty properties tailored to fit your
             lifestyle and needs!
           </p>
-          <div className="flex flex-col sm:flex-row justify-center relative z-30">
+          <div className="flex flex-col items-center sm:flex-row justify-center relative z-30">
             <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search by city, neighborhood or address"
-              className="w-full max-w-lg rounded-none rounded-l-xl border-none bg-white h-12 z-20 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus-visible:ring-2 mb-4 sm:mb-0 sm:mr-2"
+              className="w-full max-w-xs sm:max-w-lg rounded-md sm:rounded-l-xl border-none bg-white h-10 z-20 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus-visible:ring-2 mb-2 sm:mb-0 sm:mr-2"
               style={{ pointerEvents: 'auto' }}
             />
             <Button
               onClick={handleLocationSearch}
-              className="bg-secondary-500 text-white rounded-none rounded-r-xl border-none hover:bg-secondary-600 h-12 z-20"
+              className="w-full max-w-xs sm:w-auto bg-secondary-500 text-white rounded-md sm:rounded-r-xl border-none hover:bg-secondary-600 h-10 z-20"
               style={{ pointerEvents: 'auto' }}
             >
               Search
