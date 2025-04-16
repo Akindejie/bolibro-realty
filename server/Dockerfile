@@ -16,7 +16,7 @@ COPY prisma ./prisma/
 RUN npx prisma generate
 
 # Copy build debug script
-COPY build-debug.js ./
+COPY src/scripts/build-debug.js ./
 
 # Copy source files
 COPY . .
