@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, Location } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 // @ts-ignore
 const { wktToGeoJSON } = require('@terraformer/wkt');
 import axios from 'axios';
 import asyncHandler from 'express-async-handler';
 import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
 import { uploadPropertyImageToFolder } from '../utils/fileUpload';
+import { prisma } from '../lib/prisma';
+
 
 // Define AuthenticatedRequest interface
 interface AuthenticatedRequest extends Request {
@@ -15,7 +17,6 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-const prisma = new PrismaClient();
 
 export const createProperty = async (req: Request, res: Response) => {
   try {

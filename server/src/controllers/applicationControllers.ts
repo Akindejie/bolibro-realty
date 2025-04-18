@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export const getApplications = asyncHandler(
   async (

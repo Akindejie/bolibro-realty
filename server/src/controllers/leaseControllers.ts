@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { uploadLeaseDocument as uploadLeaseDocumentToStorage } from '../utils/fileUpload';
+import { prisma } from '../lib/prisma';
 
 // Define AuthenticatedRequest interface inline to avoid import issues
 interface AuthenticatedRequest extends Request {
@@ -25,8 +26,6 @@ const asyncHandler = (
     });
   };
 };
-
-const prisma = new PrismaClient();
 
 export const getLeases = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -119,24 +118,24 @@ export const getLeasePayments = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     // Validate the lease ID
     const leaseId = Number(id);
     if (isNaN(leaseId)) {
       res.status(400).json({ message: 'Invalid lease ID. Must be a number.' });
       return;
     }
-    
+
     // Check if the lease exists
     const lease = await prisma.lease.findUnique({
       where: { id: leaseId },
       include: {
         property: {
           select: {
-            managerId: true
-          }
-        }
-      }
+            managerId: true,
+          },
+        },
+      },
     });
 
     if (!lease) {
@@ -147,33 +146,37 @@ export const getLeasePayments = async (
     // Verify authorization
     const userId = req.user?.id;
     const userRole = req.user?.role?.toLowerCase();
-    
+
     if (!userId || !userRole) {
       res.status(401).json({ message: 'Authentication required' });
       return;
     }
 
     // Check if the user has permission to access this lease's payments
-    const hasPermission = 
+    const hasPermission =
       (userRole === 'manager' && lease.property.managerId === userId) ||
       (userRole === 'tenant' && lease.tenantId === userId);
 
     if (!hasPermission) {
-      res.status(403).json({ message: 'You do not have permission to access these payments' });
+      res
+        .status(403)
+        .json({
+          message: 'You do not have permission to access these payments',
+        });
       return;
     }
 
     // Find all payments for this lease
     const payments = await prisma.payment.findMany({
-      where: { leaseId: leaseId }
+      where: { leaseId: leaseId },
     });
-    
+
     res.json(payments);
   } catch (error: any) {
     console.error('Error getting lease payments:', error);
-    res.status(500).json({ 
-      message: 'Error fetching lease payments', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Error fetching lease payments',
+      error: error.message,
     });
   }
 };

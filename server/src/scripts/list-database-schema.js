@@ -2,7 +2,19 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+// Use a singleton pattern for the Prisma Client
+const prisma = (() => {
+  let instance = null;
+
+  function getInstance() {
+    if (!instance) {
+      instance = new PrismaClient();
+    }
+    return instance;
+  }
+
+  return getInstance();
+})();
 
 async function listDatabaseSchema() {
   try {

@@ -2,7 +2,20 @@ import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
-const prisma = new PrismaClient();
+
+// Use a singleton pattern for the Prisma Client
+const prisma = (() => {
+  let instance: PrismaClient | null = null;
+
+  function getInstance() {
+    if (!instance) {
+      instance = new PrismaClient();
+    }
+    return instance;
+  }
+
+  return getInstance();
+})();
 
 async function main() {
   console.log('Starting database cleanup...');
@@ -15,7 +28,6 @@ async function main() {
   console.log(`Found models: ${modelNames.join(', ')}`);
 
   // Delete in reverse order to handle foreign key constraints
-  // This approach assumes a certain deletion order to avoid foreign key constraint issues
   const deletionOrder = [
     'payment',
     'lease',
@@ -26,7 +38,6 @@ async function main() {
     'manager',
   ];
 
-  // Alternative: If you want to confirm each table deletion
   for (const model of deletionOrder) {
     try {
       // Skip models that don't exist in Prisma

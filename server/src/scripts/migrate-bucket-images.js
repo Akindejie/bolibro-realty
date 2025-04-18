@@ -2,12 +2,34 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { PrismaClient } = require('@prisma/client');
+//const prisma = new PrismaClient();  // Remove this line
 
 // Configuration
 const OLD_BUCKET = 'Property Images';
 const NEW_BUCKET = 'property-images';
 
-const prisma = new PrismaClient();
+// Use a singleton pattern for the Prisma Client
+const prisma = (() => {
+  let instance = null;
+
+  function getInstance() {
+    if (!instance) {
+      // Check if prisma.ts exists and use that, otherwise create a new instance
+      try {
+        const { prisma: prismaClient } = require('../lib/prisma'); // Adjust the path if needed
+        instance = prismaClient;
+      } catch (error) {
+        console.warn(
+          'prisma.ts not found in lib folder.  Creating a new PrismaClient instance.'
+        );
+        instance = new PrismaClient();
+      }
+    }
+    return instance;
+  }
+
+  return getInstance();
+})();
 
 // Create Supabase client
 const supabase = createClient(
@@ -162,14 +184,12 @@ async function migrateImages() {
 
     // Update property records in database
     console.log('\nChecking database for URLs to update...');
-
-    // Find all properties that might have references to the old bucket
     console.log('Querying database for properties with image URLs...');
 
     const properties = await prisma.property.findMany();
+
     console.log(`Found ${properties.length} total properties to check`);
 
-    // Filter properties that have images using the old bucket name
     const propertiesToUpdate = properties.filter((p) => {
       const hasOldImageUrl = (p.images || []).some(
         (img) => img && img.includes(OLD_BUCKET.replace(' ', '%20'))
@@ -189,7 +209,6 @@ async function migrateImages() {
       try {
         console.log(`Updating property ${property.id}...`);
 
-        // Update image URLs to use the new bucket
         const updatedImages = (property.images || []).map((img) =>
           img ? img.replace(OLD_BUCKET.replace(' ', '%20'), NEW_BUCKET) : img
         );

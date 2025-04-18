@@ -1,8 +1,22 @@
 /**
- * Script to check database connection
+ * Script to check database connection using a Singleton Prisma Client
  */
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
+
+// Use a singleton pattern to ensure only one PrismaClient instance is created
+const prisma = (() => {
+  let instance = null;
+
+  function getInstance() {
+    if (!instance) {
+      instance = new PrismaClient();
+    }
+    return instance;
+  }
+
+  return getInstance();
+})();
 
 async function checkDatabaseConnection() {
   console.log('Database connection check starting...');
@@ -11,8 +25,6 @@ async function checkDatabaseConnection() {
       process.env.DATABASE_URL ? '(connection string set)' : '(missing)'
     }`
   );
-
-  const prisma = new PrismaClient();
 
   try {
     // Try a simple query to check connection
