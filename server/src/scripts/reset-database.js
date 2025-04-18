@@ -3,9 +3,10 @@
  * This provides a clean slate for testing
  */
 require('dotenv').config();
-const { PrismaClient } = require('@prisma/client');
+//const { PrismaClient } = require('@prisma/client'); // Removed PrismaClient import
 
-const prisma = new PrismaClient();
+// Use the singleton Prisma Client
+const prisma = require('./supabase_ping_module_with_prisma_singleton'); // Import the singleton
 
 async function resetDatabase() {
   console.log('Starting database reset...');

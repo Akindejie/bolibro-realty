@@ -2,7 +2,6 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { PrismaClient } = require('@prisma/client');
-//const prisma = new PrismaClient();  // Remove this line
 
 // Configuration
 const OLD_BUCKET = 'Property Images';

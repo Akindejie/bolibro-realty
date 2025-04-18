@@ -25,7 +25,7 @@ const supabase = createClient(
 );
 
 // Initialize Prisma client
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // Define image bucket name based on your Supabase bucket
 const IMAGE_BUCKET_NAME = 'Property Images'; // Use the exact name from your Supabase account

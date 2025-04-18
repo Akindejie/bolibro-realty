@@ -1,18 +1,38 @@
 // Supabase ping module
 // This script keeps connections alive by pinging Supabase services at regular intervals
 
-const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
+const { PrismaClient } = require('@prisma/client');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Load environment variables
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
-// Initialize Prisma for database pings
-const prisma = new PrismaClient({
-  log: ['error'],
-  errorFormat: 'minimal',
-});
+// Use a singleton pattern for the Prisma Client
+const prisma = (() => {
+  let instance = null;
+
+  function getInstance() {
+    if (!instance) {
+      try {
+        const { prisma: prismaClient } = require('../lib/prisma'); // Adjust the path if needed
+        instance = prismaClient;
+      } catch (error) {
+        console.warn(
+          'prisma.ts not found in lib folder.  Creating a new PrismaClient instance.'
+        );
+        instance = new PrismaClient({
+          log: ['error'],
+          errorFormat: 'minimal',
+        });
+      }
+    }
+    return instance;
+  }
+  return getInstance();
+})();
 
 // Initialize Supabase for storage pings
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -128,7 +148,7 @@ async function pingStorage() {
  * @param {number} intervalMinutes - Interval in minutes between pings
  * @param {boolean} forceSkipDb - Force skip database pings (for when DB is known to be down)
  */
-function startPingSchedule(intervalMinutes = 1, forceSkipDb = false) {
+function startPingSchedule(intervalMinutes = 10, forceSkipDb = false) {
   console.log(
     'Ping scheduler started. Will ping' +
       (forceSkipDb ? ' only storage' : ' database and storage') +

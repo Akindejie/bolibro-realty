@@ -1,13 +1,10 @@
 // Test script for Prisma database connection
 require('dotenv').config();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma'); 
 
 async function testPrisma() {
   console.log('=== PRISMA DATABASE CONNECTION TEST ===');
   console.log('DATABASE_URL defined:', !!process.env.DATABASE_URL);
-
-  // Create Prisma client
-  const prisma = new PrismaClient();
 
   try {
     console.log('Connecting to database...');
@@ -30,7 +27,7 @@ async function testPrisma() {
     } catch (error) {
       console.error('❌ Model access failed:', error.message);
 
-      // If first attempt fails, try another model
+      // If the first attempt fails, try another model
       try {
         console.log('Trying alternative model...');
         const propertyCount = await prisma.property.count();
@@ -42,7 +39,7 @@ async function testPrisma() {
 
     console.log('\nIf all tests failed, troubleshooting steps:');
     console.log(
-      '1. Verify database is awake by running a query in Supabase SQL Editor'
+      '1. Verify the database is awake by running a query in Supabase SQL Editor'
     );
     console.log(
       '2. Check DATABASE_URL in .env matches Supabase connection string'

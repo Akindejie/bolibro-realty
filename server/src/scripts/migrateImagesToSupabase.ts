@@ -1,9 +1,9 @@
 // Migration script for Supabase
 // This script migrates images from external URLs to Supabase storage
 // Usage: npm run migrate-images
-const { PrismaClient } = require('@prisma/client');
-const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
+import { PrismaClient } from '@prisma/client';
+const dotenv = require('dotenv');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -35,8 +35,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// Initialize Prisma client
-const prisma = new PrismaClient();
+// Use a singleton pattern for the Prisma Client
+const prisma = (() => {
+  let instance: PrismaClient | null = null;
+
+  function getInstance() {
+    if (!instance) {
+      // Check if prisma.ts exists and use that, otherwise create a new instance
+      try {
+        const { prisma: prismaClient } = require('../lib/prisma'); // Adjust the path if needed
+        instance = prismaClient;
+      } catch (error) {
+        console.warn(
+          'prisma.ts not found in lib folder.  Creating a new PrismaClient instance.'
+        );
+        instance = new PrismaClient();
+      }
+    }
+    return instance;
+  }
+
+  return getInstance();
+})();
 
 // Define image bucket name based on your Supabase bucket
 const IMAGE_BUCKET_NAME = 'Property Images'; // Use the exact name from your Supabase account
@@ -249,6 +269,13 @@ async function migrateImages() {
 
     // Get all properties with images
     console.log('Finding properties with images...');
+
+    // Check if prisma is not null before proceeding
+    if (!prisma) {
+      console.error('Prisma client is not initialized.');
+      process.exit(1); // Exit the process if prisma is null
+    }
+
     const properties = await prisma.property.findMany({
       where: {
         OR: [{ images: { isEmpty: false } }, { photoUrls: { isEmpty: false } }],
@@ -385,7 +412,11 @@ async function migrateImages() {
       error instanceof Error ? error.message : String(error)
     );
   } finally {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    } else {
+      console.error('Prisma client is not initialized, cannot disconnect.');
+    }
     console.log('Migration script completed.');
 
     // Clean up temp directory
