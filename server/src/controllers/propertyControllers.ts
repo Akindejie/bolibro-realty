@@ -8,7 +8,6 @@ import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
 import { uploadPropertyImageToFolder } from '../utils/fileUpload';
 import { prisma } from '../lib/prisma';
 
-
 // Define AuthenticatedRequest interface
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -16,7 +15,6 @@ interface AuthenticatedRequest extends Request {
     role: string;
   };
 }
-
 
 export const createProperty = async (req: Request, res: Response) => {
   try {
@@ -1297,12 +1295,17 @@ export const updatePropertyImages = async (
       return;
     }
 
-    if (!images || !Array.isArray(images)) {
-      res.status(400).json({ message: 'Images array is required' });
+    if (
+      !images ||
+      !Array.isArray(images) ||
+      !images.every((url) => typeof url === 'string')
+    ) {
+      res
+        .status(400)
+        .json({ message: 'Images must be a non-empty array of strings' });
       return;
     }
 
-    // First check if the property exists and belongs to the manager
     const property = await prisma.property.findFirst({
       where: {
         id: propertyId,
@@ -1318,14 +1321,26 @@ export const updatePropertyImages = async (
       return;
     }
 
-    // Update the property with the new image URLs
+    // Optional: Prevent unnecessary writes
+    if (JSON.stringify(property.images) === JSON.stringify(images)) {
+      res.status(200).json({
+        success: true,
+        message: 'No changes made — images already up to date',
+      });
+      return;
+    }
+
     await prisma.property.update({
       where: { id: propertyId },
       data: {
-        images: images,
-        photoUrls: images, // Keep both fields synchronized
+        images,
+        photoUrls: images,
       },
     });
+
+    console.log(
+      `Property ${propertyId} updated with ${images.length} image(s) by manager ${managerId}`
+    );
 
     res.status(200).json({
       success: true,
