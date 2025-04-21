@@ -24,7 +24,7 @@ const TenantSettings = () => {
 
   const handleSubmit = async (data: typeof initialData) => {
     await updateTenant({
-      id: user?.id,
+      id: user?.supabaseId,
       ...data,
     });
   };

@@ -1,5 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
+  output          = "server/generated/prisma/client"
   previewFeatures = ["postgresqlExtensions"]
 }
 
@@ -83,6 +84,8 @@ model Application {
   name            String
   email           String
   phoneNumber     String
+  occupation      String?
+  annualIncome    Float?
   message         String?
   leaseId         Int?              @unique
   lease           Lease?            @relation(fields: [leaseId], references: [id])

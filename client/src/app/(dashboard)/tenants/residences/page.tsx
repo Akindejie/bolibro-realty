@@ -10,16 +10,16 @@ import React from 'react';
 
 const Residences = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
-  const { data: tenant } = useGetTenantQuery(user?.id || '', {
-    skip: !isAuthenticated || !user?.id,
+  const { data: tenant } = useGetTenantQuery(user?.supabaseId || '', {
+    skip: !isAuthenticated || !user?.supabaseId,
   });
 
   const {
     data: currentResidences,
     isLoading,
     error,
-  } = useGetCurrentResidencesQuery(user?.id || '', {
-    skip: !isAuthenticated || !user?.id,
+  } = useGetCurrentResidencesQuery(user?.supabaseId || '', {
+    skip: !isAuthenticated || !user?.supabaseId,
   });
 
   if (isLoading) return <Loading />;

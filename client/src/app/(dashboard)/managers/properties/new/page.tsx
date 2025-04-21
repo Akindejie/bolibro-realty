@@ -146,7 +146,7 @@ const NewProperty = () => {
   };
 
   const onSubmit = async (data: PropertyFormData) => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.supabaseId) {
       toast.error('No manager ID found. Please log in again.');
       return;
     }

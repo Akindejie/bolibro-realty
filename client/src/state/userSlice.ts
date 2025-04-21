@@ -29,7 +29,7 @@ export const userSlice = createSlice({
     setUser: (state, action: PayloadAction<Tenant | Manager | null>) => {
       if (action.payload) {
         state.user = {
-          ...action.payload,
+          ...action.payload,          
         };
         state.isAuthenticated = true;
       } else {

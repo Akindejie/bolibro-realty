@@ -24,11 +24,11 @@ const Applications = () => {
     isError,
   } = useGetApplicationsQuery(
     {
-      userId: user?.id,
+      userId: user?.supabaseId,
       userType: 'manager',
     },
     {
-      skip: !isAuthenticated || !user?.id,
+      skip: !isAuthenticated || !user?.supabaseId,
     }
   );
   const [updateApplicationStatus] = useUpdateApplicationStatusMutation();

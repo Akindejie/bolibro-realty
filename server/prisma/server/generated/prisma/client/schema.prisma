@@ -1,0 +1,182 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "server/generated/prisma/client"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DATABASE_DIRECT_URL")
+  extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
+}
+
+model Property {
+  id                Int            @id @default(autoincrement())
+  name              String
+  description       String
+  pricePerMonth     Float
+  securityDeposit   Float
+  applicationFee    Float
+  cleaningFee       Float
+  photoUrls         String[]
+  amenities         Amenity[]
+  highlights        Highlight[]
+  isPetsAllowed     Boolean        @default(false)
+  isParkingIncluded Boolean        @default(false)
+  beds              Int
+  baths             Float
+  squareFeet        Int
+  propertyType      PropertyType
+  postedDate        DateTime       @default(now())
+  averageRating     Float?         @default(0)
+  numberOfReviews   Int?           @default(0)
+  locationId        Int
+  managerId         String
+  status            PropertyStatus @default(Available)
+  images            String[]       @default([])
+  applications      Application[]
+  leases            Lease[]
+  location          Location       @relation(fields: [locationId], references: [id])
+  manager           Manager        @relation(fields: [managerId], references: [supabaseId], map: "Property_managerCognitoId_fkey")
+  favoritedBy       Tenant[]       @relation("TenantFavorites")
+  tenants           Tenant[]       @relation("TenantProperties")
+}
+
+model Manager {
+  id                Int        @id @default(autoincrement())
+  supabaseId        String     @unique(map: "Manager_cognitoId_key")
+  name              String
+  email             String
+  phoneNumber       String
+  managedProperties Property[]
+}
+
+model Tenant {
+  id           Int           @id @default(autoincrement())
+  supabaseId   String        @unique(map: "Tenant_cognitoId_key")
+  name         String
+  email        String
+  phoneNumber  String
+  applications Application[]
+  leases       Lease[]
+  favorites    Property[]    @relation("TenantFavorites")
+  properties   Property[]    @relation("TenantProperties")
+}
+
+model Location {
+  id          Int                      @id @default(autoincrement())
+  address     String
+  city        String
+  state       String
+  country     String
+  postalCode  String
+  coordinates Unsupported("geography")
+  properties  Property[]
+}
+
+model Application {
+  id              Int               @id @default(autoincrement())
+  applicationDate DateTime
+  status          ApplicationStatus
+  propertyId      Int
+  tenantId        String
+  name            String
+  email           String
+  phoneNumber     String
+  occupation      String?
+  annualIncome    Float?
+  message         String?
+  leaseId         Int?              @unique
+  lease           Lease?            @relation(fields: [leaseId], references: [id])
+  property        Property          @relation(fields: [propertyId], references: [id])
+  tenant          Tenant            @relation(fields: [tenantId], references: [supabaseId], map: "Application_tenantCognitoId_fkey")
+}
+
+model Lease {
+  id          Int          @id @default(autoincrement())
+  startDate   DateTime
+  endDate     DateTime
+  rent        Float
+  deposit     Float
+  propertyId  Int
+  tenantId    String
+  application Application?
+  property    Property     @relation(fields: [propertyId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [supabaseId], map: "Lease_tenantCognitoId_fkey")
+  payments    Payment[]
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  amountDue     Float
+  amountPaid    Float
+  dueDate       DateTime
+  paymentDate   DateTime
+  paymentStatus PaymentStatus
+  leaseId       Int
+  lease         Lease         @relation(fields: [leaseId], references: [id])
+}
+
+enum Highlight {
+  HighSpeedInternetAccess
+  WasherDryer
+  AirConditioning
+  Heating
+  SmokeFree
+  CableReady
+  SatelliteTV
+  DoubleVanities
+  TubShower
+  Intercom
+  SprinklerSystem
+  RecentlyRenovated
+  CloseToTransit
+  GreatView
+  QuietNeighborhood
+}
+
+enum Amenity {
+  WasherDryer
+  AirConditioning
+  Dishwasher
+  HighSpeedInternet
+  HardwoodFloors
+  WalkInClosets
+  Microwave
+  Refrigerator
+  Pool
+  Gym
+  Parking
+  PetsAllowed
+  WiFi
+}
+
+enum PropertyType {
+  Rooms
+  Tinyhouse
+  Apartment
+  Villa
+  Townhouse
+  Cottage
+}
+
+enum PropertyStatus {
+  Available
+  Rented
+  UnderMaintenance
+  Inactive
+}
+
+enum ApplicationStatus {
+  Pending
+  Denied
+  Approved
+}
+
+enum PaymentStatus {
+  Pending
+  Paid
+  PartiallyPaid
+  Overdue
+}

@@ -10,11 +10,12 @@ import { Property } from '@/types/prismaTypes';
 import Card from '@/components/Card';
 import CardCompact from '@/components/CardCompact';
 import Loading from '@/components/Loading';
+import { toast } from 'sonner';
 
 const Listings = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
-  const { data: tenant } = useGetTenantQuery(user?.id || '', {
-    skip: !isAuthenticated || !user?.id,
+  const { data: tenant } = useGetTenantQuery(user?.supabaseId || '', {
+    skip: !isAuthenticated || !user?.supabaseId,
   });
   const [addFavorite] = useAddFavoritePropertyMutation();
   const [removeFavorite] = useRemoveFavoritePropertyMutation();
@@ -28,22 +29,28 @@ const Listings = () => {
   } = useGetPropertiesQuery(filters);
 
   const handleFavoriteToggle = async (propertyId: number) => {
-    if (!isAuthenticated || !user || !user.id) return;
+    if (!isAuthenticated || !user || !user.supabaseId) return;
 
     const isFavorite = tenant?.favorites?.some(
       (fav: Property) => fav.id === propertyId
     );
 
-    if (isFavorite) {
-      await removeFavorite({
-        id: user.id,
-        propertyId,
-      });
-    } else {
-      await addFavorite({
-        id: user.id,
-        propertyId,
-      });
+    try {
+      if (isFavorite) {
+        await removeFavorite({
+          id: user.supabaseId,
+          propertyId,
+        });
+        toast.success('Removed from favorites!');
+      } else {
+        await addFavorite({
+          id: user.supabaseId,
+          propertyId,
+        });
+        toast.success('Added to favorites!');
+      }
+    } catch (error) {
+      toast.error('Failed to update favorites.');
     }
   };
 

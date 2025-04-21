@@ -57,7 +57,6 @@ const Auth = ({ children }: { children: React.ReactNode }) => {
   // Validate session once on initial load if authenticated from persistence
   useEffect(() => {
     const validateOnce = async () => {
-      // Only validate if authenticated and not already validated
       if (isAuthenticated && !hasAttemptedValidation.current && isInitialized) {
         hasAttemptedValidation.current = true;
 
@@ -79,7 +78,6 @@ const Auth = ({ children }: { children: React.ReactNode }) => {
           setValidationComplete(true);
         }
       } else if (!isAuthenticated) {
-        // If not authenticated, mark validation as complete
         setValidationComplete(true);
       }
     };

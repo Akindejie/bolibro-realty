@@ -10,21 +10,29 @@ import React from 'react';
 
 const Favorites = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
-  const { data: tenant } = useGetTenantQuery(user?.id || '', {
-    skip: !isAuthenticated || !user?.id,
+
+  // ✅ Use tenantId instead of user.id
+  const tenantId = user?.supabaseId;
+
+  const {
+    data: tenant,
+    isLoading: isTenantLoading,
+    error: tenantError,
+  } = useGetTenantQuery(tenantId || '', {
+    skip: !isAuthenticated || !tenantId,
   });
 
   const {
     data: favoriteProperties,
-    isLoading,
-    error,
+    isLoading: isFavoritesLoading,
+    error: favoritesError,
   } = useGetPropertiesQuery(
     { favoriteIds: tenant?.favorites?.map((fav: { id: number }) => fav.id) },
     { skip: !tenant?.favorites || tenant?.favorites.length === 0 }
   );
 
-  if (isLoading) return <Loading />;
-  if (error) return <div>Error loading favorites</div>;
+  if (isTenantLoading || isFavoritesLoading) return <Loading />;
+  if (tenantError || favoritesError) return <div>Error loading favorites</div>;
 
   const breadcrumbItems = [
     { label: 'Dashboard', href: '/tenants/favorites' },

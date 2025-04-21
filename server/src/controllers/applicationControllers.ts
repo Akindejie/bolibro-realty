@@ -4,7 +4,6 @@ import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import { prisma } from '../lib/prisma';
 
-
 export const getApplications = asyncHandler(
   async (
     req: Request<{}, {}, {}, { userId?: string; userType?: string }>,
@@ -90,6 +89,8 @@ export const createApplication = asyncHandler(
         name: string;
         email: string;
         phoneNumber: string;
+        occupation?: string;
+        annualIncome?: number;
         message?: string;
         applicationDate: string;
         status: 'Pending' | 'Approved' | 'Denied';
@@ -103,6 +104,8 @@ export const createApplication = asyncHandler(
       name,
       email,
       phoneNumber,
+      occupation,
+      annualIncome,
       message,
       applicationDate,
       status,
@@ -116,6 +119,8 @@ export const createApplication = asyncHandler(
           name,
           email,
           phoneNumber,
+          occupation,
+          annualIncome,
           message,
           property: {
             connect: { id: propertyId },

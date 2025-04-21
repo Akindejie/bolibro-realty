@@ -1,4 +1,0 @@
-# This is a manually created migration
-
-checksum = "e328c8f959ea5b9be2736594116262b10ae6fff60bc82a3e05c1a008478317c7"
-engines = ["postgresql"] 

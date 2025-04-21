@@ -29,6 +29,8 @@ const ApplicationModal = ({
       name: '',
       email: '',
       phoneNumber: '',
+      occupation: '',
+      annualIncome: 0,
       message: '',
     },
   });
@@ -76,6 +78,18 @@ const ApplicationModal = ({
               label="Phone Number"
               type="text"
               placeholder="Enter your phone number"
+            />
+            <CustomFormField
+              name="occupation"
+              label="Occupation"
+              type="text"
+              placeholder="Enter your occupation"
+            />
+            <CustomFormField
+              name="annualIncome"
+              label="Annual Income"
+              type="number"
+              placeholder="Enter your annual income"
             />
             <CustomFormField
               name="message"

@@ -30,9 +30,8 @@ import { useRouter } from 'next/navigation';
 const Properties = () => {
   const { user, isAuthenticated } = useAppSelector((state) => state.user);
 
-  // Get the ID from the JWT token if available, otherwise fall back to the user.id
   // The JWT token contains the correct Supabase ID we need to use
-  const userId = user?.supabaseId || user?.id; // If supabaseId doesn't exist, fall back to id
+  const userId = user?.supabaseId;
 
   const [deleteProperty] = useDeletePropertyMutation();
   const [updateBulkPropertyStatus] = useUpdateBulkPropertyStatusMutation();
