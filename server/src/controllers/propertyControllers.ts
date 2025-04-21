@@ -6,7 +6,7 @@ import axios from 'axios';
 import asyncHandler from 'express-async-handler';
 import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
 import { uploadPropertyImageToFolder } from '../utils/fileUpload';
-import { prisma } from '../lib/prisma';
+import { prisma, sql, join, empty } from '../lib/prisma';
 
 // Define AuthenticatedRequest interface
 interface AuthenticatedRequest extends Request {
@@ -14,6 +14,18 @@ interface AuthenticatedRequest extends Request {
     id: string;
     role: string;
   };
+}
+
+// Add this type declaration at the top with other interfaces
+interface Lease {
+  id: number;
+  propertyId: number;
+  tenantId: number;
+  startDate: Date;
+  endDate: Date;
+  status: string;
+  rentAmount: number;
+  [key: string]: any; // For any additional properties
 }
 
 export const createProperty = async (req: Request, res: Response) => {

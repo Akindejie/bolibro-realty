@@ -14,7 +14,13 @@ export function handlePrismaError(
 ): void {
   console.error(`Prisma error${operation ? ` in ${operation}` : ''}:`, error);
 
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  // Import error classes from Prisma namespace
+  const PrismaClientKnownRequestError = Prisma.PrismaClientKnownRequestError;
+  const PrismaClientValidationError = Prisma.PrismaClientValidationError;
+  const PrismaClientInitializationError =
+    Prisma.PrismaClientInitializationError;
+
+  if (error instanceof PrismaClientKnownRequestError) {
     // The .code property can be accessed in a type-safe manner
     switch (error.code) {
       case 'P2002': // Unique constraint violation
@@ -42,13 +48,13 @@ export function handlePrismaError(
           details: error.message,
         });
     }
-  } else if (error instanceof Prisma.PrismaClientValidationError) {
+  } else if (error instanceof PrismaClientValidationError) {
     // Invalid model field provided
     res.status(400).json({
       message: 'Invalid data provided',
       details: error.message,
     });
-  } else if (error instanceof Prisma.PrismaClientInitializationError) {
+  } else if (error instanceof PrismaClientInitializationError) {
     // Database connection error
     res.status(503).json({
       message: 'Database connection error',

@@ -1,0 +1,501 @@
+========== BUILD DEBUG INFORMATION ==========
+Current working directory: /Users/console/Desktop/code/bolibro-realty/server
+Node version: v22.13.1
+Environment: undefined
+tsconfig.json exists
+Error reading tsconfig.json: SyntaxError: Expected property name or '}' in JSON at position 29 (line 3 column 5)
+package.json exists
+TypeScript version in package.json: ^5.1.6
+src/index.ts exists
+File size: 3861 bytes
+Last modified: Sat Apr 19 2025 16:32:40 GMT-0400 (Eastern Daylight Time)
+First 10 lines of src/index.ts:
+// Load environment variables at the very top before any imports
+require('dotenv').config();
+
+import express, { Express } from 'express';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+// Will use dynamic import for helmet
+import morgan from 'morgan';
+import applicationRoutes from './routes/applicationRoutes';
+import { errorHandler } from './middleware/errorMiddleware';
+ping-supabase.js exists
+File size: 7393 bytes
+Last modified: Fri Apr 18 2025 14:07:08 GMT-0400 (Eastern Daylight Time)
+ping-supabase.js contains startPingSchedule function
+
+Contents of src directory:
+ - config (directory)
+ - controllers (directory)
+ - db (directory)
+ - fallback.ts (file)
+ - index.js (file)
+ - index.ts (file)
+ - lib (directory)
+ - middleware (directory)
+ - routes (directory)
+ - scripts (directory)
+ - types (directory)
+ - utils (directory)
+
+Contents of src/scripts directory:
+Found 20 files in scripts directory
+ - build-debug.js
+ - check-db-connection.js
+ - clean-supabase.js
+ - clear-database.sql
+ - clear-database.ts
+ - clear-supabase-db.js
+ - delete-all-data.js
+ - initialize-supabase.js
+ - list-database-schema.js
+ - migrate-bucket-images.js
+ - migrate-to-supabase.js
+ - migrateImagesToSupabase.ts
+ - ping-supabase-storage.js
+ - ping-supabase.js
+ - reset-database.js
+ - run-database-ping.js
+ - sync-image-fields.js
+ - temp
+ - test-prisma.js
+ - test-supabase.js
+
+Checking for TypeScript:
+TypeScript version: Version 5.8.2
+
+Attempting manual TypeScript build:
+Running tsc --listFiles to see which files are being included:
+Files included in compilation:
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es5.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2016.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2018.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2019.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.dom.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.dom.iterable.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.webworker.importscripts.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.scripthost.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.core.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.collection.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.generator.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.iterable.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.promise.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.proxy.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.reflect.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.symbol.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2016.array.include.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2016.intl.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.date.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.object.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.string.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.intl.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2018.intl.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2018.promise.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2018.regexp.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2019.array.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2019.object.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2019.string.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2019.symbol.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2019.intl.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.bigint.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.date.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.promise.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.string.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.intl.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2020.number.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.decorators.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.decorators.legacy.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/typescript/lib/lib.es2016.full.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/compatibility/disposable.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/compatibility/indexable.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/compatibility/iterators.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/compatibility/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/globals.typedarray.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/buffer.buffer.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/header.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/readable.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/file.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/fetch.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/formdata.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/connector.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/client.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/errors.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/dispatcher.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/global-dispatcher.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/global-origin.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/pool-stats.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/pool.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/handlers.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/balanced-pool.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/agent.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/mock-interceptor.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/mock-agent.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/mock-client.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/mock-pool.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/mock-errors.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/proxy-agent.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/env-http-proxy-agent.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/retry-handler.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/retry-agent.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/api.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/interceptors.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/util.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/cookies.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/patch.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/websocket.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/eventsource.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/filereader.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/diagnostics-channel.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/content-type.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/cache.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/undici-types/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/globals.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/assert.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/assert/strict.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/async_hooks.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/buffer.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/child_process.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/cluster.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/console.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/constants.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/crypto.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/dgram.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/diagnostics_channel.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/dns.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/dns/promises.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/domain.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/dom-events.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/events.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/fs.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/fs/promises.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/http.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/http2.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/https.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/inspector.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/module.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/net.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/os.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/path.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/perf_hooks.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/process.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/punycode.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/querystring.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/readline.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/readline/promises.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/repl.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/sea.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/stream.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/stream/promises.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/stream/consumers.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/stream/web.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/string_decoder.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/test.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/timers.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/timers/promises.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/tls.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/trace_events.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/tty.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/url.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/util.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/v8.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/vm.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/wasi.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/worker_threads.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/zlib.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/node/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/mime/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/send/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/qs/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/range-parser/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/express-serve-static-core/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/http-errors/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/serve-static/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/connect/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/body-parser/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/express/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/cors/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/fallback.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/morgan/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/functions-js/dist/module/types.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/functions-js/dist/module/FunctionsClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/functions-js/dist/module/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/PostgrestError.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/select-query-parser/types.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/select-query-parser/parser.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/select-query-parser/utils.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/types.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/PostgrestBuilder.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/select-query-parser/result.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/PostgrestTransformBuilder.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/PostgrestFilterBuilder.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/PostgrestQueryBuilder.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/PostgrestClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/postgrest-js/dist/cjs/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/ws/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/lib/constants.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/lib/serializer.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/lib/timer.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/lib/push.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/phoenix/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/RealtimePresence.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/RealtimeChannel.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/RealtimeClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/realtime-js/dist/module/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/lib/errors.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/lib/types.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/lib/fetch.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/packages/StorageFileApi.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/packages/StorageBucketApi.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/StorageClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/storage-js/dist/module/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/lib/error-codes.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/lib/errors.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/lib/types.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/lib/fetch.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/GoTrueAdminApi.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/lib/helpers.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/GoTrueClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/AuthAdminApi.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/AuthClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/lib/locks.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/auth-js/dist/module/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/supabase-js/dist/module/lib/types.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/supabase-js/dist/module/lib/SupabaseAuthClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/supabase-js/dist/module/SupabaseClient.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@supabase/supabase-js/dist/module/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/config/supabase.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/middleware/authMiddleware.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@prisma/client/runtime/library.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/.prisma/client/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/.prisma/client/default.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@prisma/client/default.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/utils/prismaErrorHandler.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/utils/asyncHandler.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/lib/prisma.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/controllers/applicationControllers.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/routes/applicationRoutes.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/middleware/errorMiddleware.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/utils/database.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/types/authenticatedRequest.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/controllers/tenantControllers.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/routes/tenantRoutes.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/controllers/managerControllers.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/routes/managerRoutes.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/multer/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/middleware/uploadMiddleware.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/axios/index.d.cts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/express-async-handler/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/utils/fileUpload.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/controllers/propertyControllers.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/routes/propertyRoutes.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/controllers/leaseControllers.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/routes/leaseRoutes.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/content-security-policy/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/cross-origin-embedder-policy/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/cross-origin-opener-policy/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/cross-origin-resource-policy/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/expect-ct/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/origin-agent-cluster/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/referrer-policy/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/strict-transport-security/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-content-type-options/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-dns-prefetch-control/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-download-options/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-frame-options/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-permitted-cross-domain-policies/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-powered-by/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/middlewares/x-xss-protection/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/helmet/dist/types/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/index.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/dotenv/lib/main.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/scripts/clear-database.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/scripts/migrateImagesToSupabase.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/utils/slugGenerator.ts
+/Users/console/Desktop/code/bolibro-realty/server/src/utils/supabaseBuckets.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/bcryptjs/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/cookie-parser/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/json-schema/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/ms/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/jsonwebtoken/index.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/classes/semver.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/parse.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/valid.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/clean.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/inc.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/diff.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/major.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/minor.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/patch.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/prerelease.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/compare.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/rcompare.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/compare-loose.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/compare-build.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/sort.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/rsort.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/gt.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/lt.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/eq.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/neq.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/gte.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/lte.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/cmp.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/coerce.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/classes/comparator.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/classes/range.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/functions/satisfies.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/max-satisfying.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/min-satisfying.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/to-comparators.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/min-version.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/valid.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/outside.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/gtr.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/ltr.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/intersects.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/simplify.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/ranges/subset.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/internals/identifiers.d.ts
+/Users/console/Desktop/code/bolibro-realty/server/node_modules/@types/semver/index.d.ts
+
+Running tsc build with diagnostics:
+Trace output would be too large to display
+Full trace output saved to tsc-trace.log
+Trying build with explicit source file:
+Explicit file build failed: Command failed: npx tsc --outDir ./dist src/index.ts
+dist/index.js was successfully created
+File size: 8593 bytes
+Last modified: Mon Apr 21 2025 17:31:25 GMT-0400 (Eastern Daylight Time)
+First 200 characters of dist/index.js:
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { reso...
+
+Contents of dist directory after manual build:
+Found 12 files/directories in dist/
+ - config (directory)
+   Contains 1 files/directories
+   - supabase.js
+ - controllers (directory)
+   Contains 5 files/directories
+   - applicationControllers.js
+   - leaseControllers.js
+   - managerControllers.js
+   - propertyControllers.js
+   - tenantControllers.js
+ - fallback.js (file)
+ - index.js (file)
+ - lib (directory)
+   Contains 1 files/directories
+   - prisma.js
+ - middleware (directory)
+   Contains 3 files/directories
+   - authMiddleware.js
+   - errorMiddleware.js
+   - uploadMiddleware.js
+ - prisma (directory)
+   Contains 1 files/directories
+   - seed.js
+ - routes (directory)
+   Contains 5 files/directories
+   - applicationRoutes.js
+   - leaseRoutes.js
+   - managerRoutes.js
+   - propertyRoutes.js
+   - tenantRoutes.js
+ - scripts (directory)
+   Contains 2 files/directories
+   - clear-database.js
+   - migrateImagesToSupabase.js
+ - src (directory)
+   Contains 8 files/directories
+   - config
+   - controllers
+   - index.js
+   - middleware
+   - routes
+   ... and 3 more
+ - types (directory)
+   Contains 1 files/directories
+   - authenticatedRequest.js
+ - utils (directory)
+   Contains 6 files/directories
+   - asyncHandler.js
+   - database.js
+   - fileUpload.js
+   - prismaErrorHandler.js
+   - slugGenerator.js
+   ... and 1 more
+========== END DEBUG INFORMATION ==========
+Attempting to fix the TypeScript build:
+Ensuring scripts directory exists in dist:
+Copying scripts from src/scripts to dist/scripts:
+Copied build-debug.js to dist/scripts/
+Made build-debug.js executable
+Copied check-db-connection.js to dist/scripts/
+Made check-db-connection.js executable
+Copied clean-supabase.js to dist/scripts/
+Made clean-supabase.js executable
+Copied clear-supabase-db.js to dist/scripts/
+Made clear-supabase-db.js executable
+Copied delete-all-data.js to dist/scripts/
+Made delete-all-data.js executable
+Copied initialize-supabase.js to dist/scripts/
+Made initialize-supabase.js executable
+Copied list-database-schema.js to dist/scripts/
+Made list-database-schema.js executable
+Copied migrate-bucket-images.js to dist/scripts/
+Made migrate-bucket-images.js executable
+Copied migrate-to-supabase.js to dist/scripts/
+Made migrate-to-supabase.js executable
+Copied ping-supabase-storage.js to dist/scripts/
+Made ping-supabase-storage.js executable
+Copied ping-supabase.js to dist/scripts/
+Made ping-supabase.js executable
+Copied reset-database.js to dist/scripts/
+Made reset-database.js executable
+Copied run-database-ping.js to dist/scripts/
+Made run-database-ping.js executable
+Copied sync-image-fields.js to dist/scripts/
+Made sync-image-fields.js executable
+Copied test-prisma.js to dist/scripts/
+Made test-prisma.js executable
+Copied test-supabase.js to dist/scripts/
+Made test-supabase.js executable
+Copying all JS files from src to dist:
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/index.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/index.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/build-debug.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/build-debug.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/check-db-connection.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/check-db-connection.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/clean-supabase.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/clean-supabase.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/clear-supabase-db.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/clear-supabase-db.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/delete-all-data.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/delete-all-data.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/initialize-supabase.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/initialize-supabase.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/list-database-schema.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/list-database-schema.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/migrate-bucket-images.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/migrate-bucket-images.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/migrate-to-supabase.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/migrate-to-supabase.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/ping-supabase-storage.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/ping-supabase-storage.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/ping-supabase.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/ping-supabase.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/reset-database.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/reset-database.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/run-database-ping.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/run-database-ping.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/sync-image-fields.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/sync-image-fields.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/test-prisma.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/test-prisma.js
+Copied: /Users/console/Desktop/code/bolibro-realty/server/src/scripts/test-supabase.js -> /Users/console/Desktop/code/bolibro-realty/server/dist/scripts/test-supabase.js
+Finished copying JS files
+Fix attempt 1: Creating a simpler tsconfig.json
+Created tsconfig.simple.json
+Building with simple config:
+Build with simple config succeeded
+FIXED: dist/index.js was successfully created after fix attempts
+Build debug completed. Check build-debug.log for details.

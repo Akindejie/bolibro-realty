@@ -5,7 +5,6 @@ const { wktToGeoJSON } = require('@terraformer/wkt');
 import { AuthenticatedRequest } from '../types/authenticatedRequest';
 import { prisma } from '../lib/prisma';
 
-
 /**
  * This application now uses Supabase for authentication.
  * The database schema has been updated to use supabaseId column names
@@ -179,7 +178,7 @@ export const getCurrentResidences = async (
     });
 
     const residencesWithFormattedLocation = await Promise.all(
-      properties.map(async (property) => {
+      properties.map(async (property: any) => {
         const coordinates: { coordinates: string }[] =
           await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
 
@@ -238,7 +237,7 @@ export const addFavoriteProperty = async (
     const propertyIdNumber = Number(propertyId);
     const existingFavorites = tenant.favorites || [];
 
-    if (!existingFavorites.some((fav) => fav.id === propertyIdNumber)) {
+    if (!existingFavorites.some((fav: any) => fav.id === propertyIdNumber)) {
       // Using supabaseId to update the tenant
       const updatedTenant = await prisma.tenant.update({
         where: { supabaseId: userId },

@@ -6,10 +6,40 @@ require('dotenv').config();
 
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
 
 // Create Express app
 const app = express();
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = process.env.PORT || 3000;
+
+// Try to load ping-supabase script
+let pingSupabase: any = null;
+try {
+  // Try multiple possible locations for the ping-supabase script
+  const possiblePaths = [
+    './dist/scripts/ping-supabase.js',
+    './src/scripts/ping-supabase.js',
+    './scripts/ping-supabase.js',
+  ];
+
+  for (const scriptPath of possiblePaths) {
+    if (fs.existsSync(scriptPath)) {
+      console.log(`Found ping-supabase script at ${scriptPath}`);
+      pingSupabase = require(scriptPath);
+      break;
+    }
+  }
+
+  if (pingSupabase && typeof pingSupabase.startPingSchedule === 'function') {
+    console.log('Starting ping schedule...');
+    pingSupabase.startPingSchedule(10); // Ping every 10 minutes
+  } else {
+    console.error('startPingSchedule function not found in ping-supabase.js');
+  }
+} catch (e) {
+  console.error('Failed to load ping-supabase script:', e);
+}
 
 // Basic middleware
 app.use(express.json());
@@ -19,7 +49,7 @@ app.use(cors());
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
-    message: 'TypeScript fallback server is running',
+    message: 'Fallback server is running',
     timestamp: new Date().toISOString(),
     version: 'fallback',
     environment: process.env.NODE_ENV || 'development',
@@ -29,9 +59,10 @@ app.get('/health', (req, res) => {
 // Root endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
-    message: 'Bolibro Realty API - TypeScript Fallback Mode',
-    status: 'limited',
-    info: 'Running in fallback mode with limited functionality',
+    status: 'ok',
+    message: 'Bolibro Realty API Fallback Server',
+    mode: 'fallback',
+    ping_service: pingSupabase ? 'enabled' : 'disabled',
   });
 });
 
@@ -74,7 +105,7 @@ app.use('*', (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`TypeScript fallback server running on port ${PORT}`);
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`Fallback server running on port ${PORT}`);
   console.log('WARNING: Running in fallback mode with limited functionality');
 });

@@ -1,15 +1,12 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+// Create a singleton instance of the PrismaClient
+const prisma = new PrismaClient({
+  log: ['error', 'warn'],
+});
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ['error'],
-  });
+// Export SQL tag for use in raw queries
+const { sql, join, empty } = Prisma;
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+export { prisma, sql, join, empty };
+export default prisma;
