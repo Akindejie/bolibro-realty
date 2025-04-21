@@ -8,10 +8,11 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import { Prisma } from '@prisma/client';
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Try to load ping-supabase script
 let pingSupabase: any = null;
@@ -105,7 +106,7 @@ app.use('*', (req, res) => {
 });
 
 // Start the server
-app.listen(Number(PORT), '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Fallback server running on port ${PORT}`);
   console.log('WARNING: Running in fallback mode with limited functionality');
 });
