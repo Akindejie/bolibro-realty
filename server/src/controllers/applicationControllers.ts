@@ -25,7 +25,7 @@ export const getApplications = asyncHandler(
           },
           select: { id: true },
         });
-        const propertyIds = properties.map((p) => p.id);
+        const propertyIds = properties.map((p: Prisma.Property) => p.id);
         whereClause.propertyId = { in: propertyIds };
       } else if (userType === 'tenant') {
         whereClause.tenantId = userId;
@@ -49,7 +49,7 @@ export const getApplications = asyncHandler(
       },
     });
 
-    const mappedApplications = applications.map((app) => ({
+    const mappedApplications = applications.map((app: Prisma.Application) => ({
       id: app.id,
       applicationDate: app.applicationDate,
       status: app.status,
@@ -152,7 +152,7 @@ export const createApplication = asyncHandler(
 
 export const updateApplicationStatus = asyncHandler(
   async (
-    req: Request<{ id: string }, {}, { status: ApplicationStatus }>,
+    req: Request<{ id: string }, any, { status: ApplicationStatus }>,
     res: Response,
     next: NextFunction
   ) => {
