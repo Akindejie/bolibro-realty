@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  output          = "server/generated/prisma/client"
+  // Using default output location (node_modules/@prisma/client) for compatibility with standard imports
   previewFeatures = ["postgresqlExtensions"]
 }
 
