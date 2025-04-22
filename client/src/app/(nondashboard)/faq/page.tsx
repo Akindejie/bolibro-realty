@@ -48,7 +48,7 @@ const FAQ = () => {
     {
       question: 'What is the application process for renting a property?',
       answer:
-        'Our application process is straightforward. First, find a property you&apos;re interested in and schedule a viewing. If you decide to proceed, complete our online application form, which includes personal information, employment details, rental history, and references. We&apos;ll conduct background and credit checks. Once approved, you&apos;ll sign the lease agreement and pay the security deposit to secure the property.',
+        "Our application process is straightforward. First, find a property you're interested in and schedule a viewing. If you decide to proceed, complete our online application form, which includes personal information, employment details, rental history, and references. We'll conduct background and credit checks. Once approved, you'll sign the lease agreement and pay the security deposit to secure the property.",
     },
     {
       question: 'Are utilities included in the rent?',
@@ -73,7 +73,7 @@ const FAQ = () => {
     {
       question: 'What happens when my lease is ending?',
       answer:
-        'Approximately 60-90 days before your lease end date, we&apos;ll contact you about your renewal options. If you wish to renew, we&apos;ll provide the new terms and rental rate. If you decide not to renew, you&apos;ll need to provide notice as specified in your lease (typically 30-60 days). We&apos;ll then schedule a move-out inspection and provide information about the security deposit return process.',
+        "Approximately 60-90 days before your lease end date, we'll contact you about your renewal options. If you wish to renew, we'll provide the new terms and rental rate. If you decide not to renew, you'll need to provide notice as specified in your lease (typically 30-60 days). We'll then schedule a move-out inspection and provide information about the security deposit return process.",
     },
     {
       question: 'Do you offer furnished properties?',
@@ -86,7 +86,6 @@ const FAQ = () => {
         'Security features vary by property but may include secure entry systems, surveillance cameras in common areas, well-lit parking areas, and deadbolt locks. We take the safety of our tenants seriously and regularly review and update security measures as needed. Specific security features for each property are listed in the property description.',
     },
   ];
-
   return (
     <div>
       <Navbar />
