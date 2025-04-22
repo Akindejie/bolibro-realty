@@ -2,7 +2,21 @@ import { Request, Response, NextFunction } from 'express';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import prisma, { withRetry } from '../utils/database';
-import { Prisma, ApplicationStatus, PropertyStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+
+// Define enums locally if they're not available from Prisma
+enum ApplicationStatus {
+  Pending = 'Pending',
+  Denied = 'Denied',
+  Approved = 'Approved',
+}
+
+enum PropertyStatus {
+  Available = 'Available',
+  Rented = 'Rented',
+  UnderMaintenance = 'UnderMaintenance',
+  Inactive = 'Inactive',
+}
 
 // Define Lease interface since we're not importing from @prisma/client
 interface Lease {

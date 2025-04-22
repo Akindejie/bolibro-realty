@@ -6,7 +6,7 @@ import axios from 'axios';
 import asyncHandler from 'express-async-handler';
 import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
 import { uploadPropertyImageToFolder } from '../utils/fileUpload';
-import prisma, { sql } from '../utils/database';
+import prisma, { withRetry, sql } from '../utils/database';
 
 // Define AuthenticatedRequest interface
 interface AuthenticatedRequest extends Request {

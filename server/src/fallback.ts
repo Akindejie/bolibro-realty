@@ -4,10 +4,10 @@
 // Load environment variables
 require('dotenv').config();
 
-import express from 'express';
-import path from 'path';
-import fs from 'fs';
-import { Prisma } from '@prisma/client';
+// Use require syntax instead of import for compatibility
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
 
 // Create Express app
 const app = express();

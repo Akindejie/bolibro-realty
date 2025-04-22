@@ -38,6 +38,12 @@ function checkFallbackIndex() {
   return fs.existsSync(fallbackPath);
 }
 
+// Check if pure-fallback.js exists
+function checkPureFallback() {
+  const pureFallbackPath = path.join(__dirname, 'pure-fallback.js');
+  return fs.existsSync(pureFallbackPath);
+}
+
 // Try to fix Prisma
 function tryFixPrisma() {
   try {
@@ -78,6 +84,7 @@ async function bootstrap() {
   log(`Dist directory exists: ${checkDistDirectory()}`);
   log(`Main index.js exists: ${checkDistIndex()}`);
   log(`Fallback index exists: ${checkFallbackIndex()}`);
+  log(`Pure fallback exists: ${checkPureFallback()}`);
 
   // Try to start the main server
   try {
@@ -119,6 +126,22 @@ async function bootstrap() {
     }
   } catch (fallbackError) {
     log(`Failed to start TS fallback server: ${fallbackError.message}`);
+  }
+
+  // Try pure JavaScript fallback
+  try {
+    log('Attempting to start pure JavaScript fallback server...');
+    if (checkPureFallback()) {
+      log('Loading pure-fallback.js...');
+      require('./pure-fallback.js');
+      return; // Successfully started pure fallback
+    } else {
+      log('pure-fallback.js not found');
+    }
+  } catch (pureFallbackError) {
+    log(
+      `Failed to start pure JavaScript fallback server: ${pureFallbackError.message}`
+    );
   }
 
   // Last resort: fallback server
