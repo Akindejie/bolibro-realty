@@ -1,6 +1,7 @@
 /**
  * Simple ping-supabase script for the fallback server
  * This script pings Supabase at regular intervals to keep the connection alive
+ * WITHOUT any Prisma dependency
  */
 
 // Load environment variables

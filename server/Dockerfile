@@ -33,14 +33,18 @@ RUN npm pkg set scripts.postinstall="echo Skipping automatic postinstall"
 # Install dependencies
 RUN npm ci
 
-# Copy source files
+# Create scripts directory structure and copy ping script to multiple locations
+RUN mkdir -p /app/scripts \
+    && mkdir -p /app/dist/scripts \
+    && mkdir -p /app/src/scripts
+
+# Copy the simplified ping-supabase.js script from the scripts directory
+COPY scripts/ping-supabase.js /app/scripts/
+COPY scripts/ping-supabase.js /app/dist/scripts/
+COPY scripts/ping-supabase.js /app/src/scripts/
+
+# Copy remaining source files
 COPY . .
-
-# Create scripts directory
-RUN mkdir -p /app/scripts
-
-# Copy ping-supabase.js to scripts directory
-COPY src/scripts/ping-supabase.js /app/scripts/
 
 # Generate Prisma client explicitly with full path
 RUN npx prisma generate --schema=./prisma/schema.prisma || echo "Failed to generate Prisma client, but continuing build"
@@ -57,11 +61,11 @@ RUN npm pkg set scripts.postinstall="node -e \"const fs=require('fs'); if(fs.exi
 # Build the application, but continue even if it fails
 RUN npm run build || echo "Main build failed, will use fallback"
 
-# Create backup copies of key files in multiple locations to ensure they're found
-RUN mkdir -p /app/dist/scripts && \
-    cp -f /app/scripts/ping-supabase.js /app/dist/scripts/ || echo "Could not copy ping-supabase.js to /app/dist/scripts/ (but will continue)" && \
-    cp -f /app/fallback-server.js /app/dist/ || echo "Could not copy fallback-server.js to dist (but will continue)" && \
-    cp -f /app/pure-fallback.js /app/dist/ || echo "Could not copy pure-fallback.js to dist (but will continue)"
+# Make sure latest ping-supabase.js is copied everywhere it might be needed
+RUN cp -f /app/scripts/ping-supabase.js /app/dist/scripts/ \
+    && cp -f /app/scripts/ping-supabase.js /app/src/scripts/ \
+    && cp -f /app/fallback-server.js /app/dist/ \
+    && cp -f /app/pure-fallback.js /app/dist/
 
 # Create a healthcheck to see if we're still running
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
