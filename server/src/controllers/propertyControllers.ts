@@ -312,7 +312,7 @@ export const getProperties = async (
       longitude,
     } = req.query;
 
-    let whereConditions: Prisma.sql[] = [];
+    let whereConditions: Prisma.Sql[] = [];
 
     if (favoriteIds) {
       const favoriteIdsArray = (favoriteIds as string).split(',').map(Number);
