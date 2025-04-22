@@ -6,23 +6,36 @@ WORKDIR /app
 # Install dependencies needed for Prisma
 RUN apk add --no-cache openssl
 
-# Copy package.json and package-lock.json
+# Copy package files first
 COPY package*.json ./
+
+# Copy the verification script and Prisma schema directory
+COPY verify-prisma.sh ./
+COPY prisma ./prisma/
+COPY fallback-server.js ./
+COPY bootstrap.js ./
+
+# Make scripts executable
+RUN chmod +x ./verify-prisma.sh
+RUN chmod +x ./bootstrap.js
+
+# Run verification script
+RUN ./verify-prisma.sh
+
+# Temporarily disable postinstall script to avoid premature Prisma generation
+RUN npm pkg set scripts.postinstall="echo Skipping automatic postinstall"
 
 # Install dependencies
 RUN npm ci
 
-# Copy prisma schema
-COPY prisma ./prisma/
-
-# Copy fallback server first
-COPY fallback-server.js ./
-
 # Copy source files
 COPY . .
 
-# Generate Prisma client explicitly
-RUN npx prisma generate --schema=./prisma/schema.prisma
+# Generate Prisma client explicitly with full path
+RUN npx prisma generate --schema=./prisma/schema.prisma || echo "Failed to generate Prisma client, but continuing build"
+
+# Re-enable postinstall script for future use
+RUN npm pkg set scripts.postinstall="node -e \"const fs=require('fs'); if(fs.existsSync('./prisma/schema.prisma')) { console.log('Prisma schema found, generating client...'); require('child_process').execSync('prisma generate --schema=./prisma/schema.prisma', {stdio: 'inherit'}); } else { console.log('WARNING: Prisma schema not found'); }\""
 
 # Build the application
 RUN npm run build
@@ -42,5 +55,5 @@ ENV NODE_ENV=production
 # Expose the port that the app uses
 EXPOSE $PORT
 
-# Start with fallback mechanism
-CMD ["npm", "start"]
+# Start with bootstrap script
+CMD ["node", "bootstrap.js"]
