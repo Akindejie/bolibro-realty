@@ -6,7 +6,7 @@ import axios from 'axios';
 import asyncHandler from 'express-async-handler';
 import { supabase, SUPABASE_BUCKETS } from '../config/supabase';
 import { uploadPropertyImageToFolder } from '../utils/fileUpload';
-import prisma, { withRetry } from '../utils/database';
+import prisma, { sql } from '../utils/database';
 
 // Define AuthenticatedRequest interface
 interface AuthenticatedRequest extends Request {
@@ -312,7 +312,7 @@ export const getProperties = async (
       longitude,
     } = req.query;
 
-    let whereConditions: Prisma.Sql[] = [];
+    let whereConditions: Prisma.sql[] = [];
 
     if (favoriteIds) {
       const favoriteIdsArray = (favoriteIds as string).split(',').map(Number);

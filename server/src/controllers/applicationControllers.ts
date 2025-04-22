@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import prisma, { withRetry } from '../utils/database';
+import { Property, Application } from '@prisma/client'; 
 
 export const getApplications = asyncHandler(
   async (

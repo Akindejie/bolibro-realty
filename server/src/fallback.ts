@@ -6,8 +6,8 @@ require('dotenv').config();
 
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs'; // Use namespace import
+import * as path from 'path'; // Use namespace import
 import { Prisma } from '@prisma/client';
 
 // Create Express app
