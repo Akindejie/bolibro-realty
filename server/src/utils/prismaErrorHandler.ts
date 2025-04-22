@@ -3,13 +3,13 @@ import { Response } from 'express';
 
 /**
  * Handles Prisma errors and returns appropriate HTTP responses
- * @param error The error object
  * @param res Express response object
+ * @param error The error object
  * @param operation Optional name of the operation that failed
  */
 export function handlePrismaError(
-  error: any,
   res: Response,
+  error: any,
   operation?: string
 ): void {
   console.error(`Prisma error${operation ? ` in ${operation}` : ''}:`, error);

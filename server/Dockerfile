@@ -3,35 +3,44 @@ FROM node:18-alpine
 # Working directory
 WORKDIR /app
 
+# Install dependencies needed for Prisma
+RUN apk add --no-cache openssl
+
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
 
-# Copy prisma files
+# Copy prisma schema
 COPY prisma ./prisma/
 
-# 🛠️ Generate Prisma client
-RUN npx prisma generate
-
-# Copy build debug script
-COPY src/scripts/build-debug.js ./src/scripts/
-COPY src/scripts/ping-supabase.js ./src/scripts/
+# Copy fallback server first
+COPY fallback-server.js ./
 
 # Copy source files
 COPY . .
 
+# Generate Prisma client explicitly
+RUN npx prisma generate --schema=./prisma/schema.prisma
+
 # Build the application
 RUN npm run build
-
-# Check if Prisma client is loaded successfully
-RUN node -e "require('@prisma/client'); console.log('✅ Prisma client loaded successfully')"
 
 # Create backup copies of key files
 RUN mkdir -p /app/scripts && \
     cp -f /app/src/scripts/ping-supabase.js /app/scripts/ || echo "Could not copy ping-supabase.js (but will continue)" && \
     cp -f /app/fallback-server.js /app/dist/ || echo "Could not copy fallback-server.js to dist (but will continue)"
 
+# Create a healthcheck to see if we're still running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -q -O - http://localhost:$PORT/health || exit 1
+
+# Set environment variable for Node
+ENV NODE_ENV=production
+
+# Expose the port that the app uses
+EXPOSE $PORT
+
 # Start with fallback mechanism
-CMD ["node", "-e", "try { require('./dist/index.js') } catch(e) { console.error('Error loading main app:', e); try { require('./dist/fallback.js') } catch(e2) { console.error('Error loading TypeScript fallback:', e2); require('./fallback-server.js') } }"]
+CMD ["npm", "start"]

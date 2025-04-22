@@ -62,7 +62,11 @@ export const applicationSchema = z.object({
   email: z.string().email('Invalid email address'),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
   occupation: z.string().min(1, 'Occupation is required'),
-  annualIncome: z.coerce.number().positive().min(0).optional(),
+  annualIncome: z.coerce
+    .number()
+    .positive('Annual income must be positive')
+    .min(0, 'Annual income cannot be negative')
+    .default(0),
   message: z.string().optional(),
 });
 

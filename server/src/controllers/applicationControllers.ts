@@ -92,25 +92,12 @@ export const getApplications = asyncHandler(
 );
 
 export const createApplication = asyncHandler(
-  async (
-    req: Request<
-      {},
-      {},
-      {
-        propertyId: number;
-        tenantId: string;
-        name: string;
-        email: string;
-        phoneNumber: string;
-        occupation?: string;
-        annualIncome?: number;
-        message?: string;
-        applicationDate: string;
-        status: ApplicationStatus;
-      }
-    >,
-    res: Response
-  ) => {
+  async (req: Request, res: Response) => {
+    console.log(
+      'Application creation request body:',
+      JSON.stringify(req.body, null, 2)
+    );
+
     const {
       propertyId,
       tenantId,
@@ -124,19 +111,102 @@ export const createApplication = asyncHandler(
       status,
     } = req.body;
 
+    console.log('Extracted fields:', {
+      propertyId: typeof propertyId,
+      propertyIdValue: propertyId,
+      tenantId,
+      name,
+      email,
+      phoneNumber,
+    });
+
+    // Validate required fields
+    const missingFields = [];
+    if (!propertyId) missingFields.push('propertyId');
+    if (!tenantId) missingFields.push('tenantId');
+    if (!name) missingFields.push('name');
+    if (!email) missingFields.push('email');
+    if (!phoneNumber) missingFields.push('phoneNumber');
+
+    if (missingFields.length > 0) {
+      const errorMessage = `Missing required fields: ${missingFields.join(
+        ', '
+      )}`;
+      console.error(errorMessage);
+      return res.status(400).json({
+        message: errorMessage,
+      });
+    }
+
+    // Ensure propertyId is a valid number
+    const parsedPropertyId =
+      typeof propertyId === 'number' ? propertyId : parseInt(propertyId, 10);
+    if (isNaN(parsedPropertyId)) {
+      const errorMessage = `Invalid propertyId format: ${propertyId} (type: ${typeof propertyId})`;
+      console.error(errorMessage);
+      return res.status(400).json({ message: errorMessage });
+    }
+
+    console.log('Valid propertyId parsed:', parsedPropertyId);
+
     try {
+      // Check if property exists
+      const property = await prisma.property.findUnique({
+        where: { id: parsedPropertyId },
+      });
+
+      if (!property) {
+        const errorMessage = `Property not found with ID: ${parsedPropertyId}`;
+        console.error(errorMessage);
+        return res.status(404).json({ message: errorMessage });
+      }
+
+      console.log('Property found:', property.id, property.name);
+
+      // Check if tenant exists
+      const tenant = await prisma.tenant.findUnique({
+        where: { supabaseId: tenantId },
+      });
+
+      if (!tenant) {
+        const errorMessage = `Tenant not found with ID: ${tenantId}`;
+        console.error(errorMessage);
+        return res.status(404).json({ message: errorMessage });
+      }
+
+      console.log('Tenant found:', tenant.id, tenant.name);
+
+      const parsedAnnualIncome =
+        annualIncome !== undefined
+          ? typeof annualIncome === 'number'
+            ? annualIncome
+            : parseFloat(annualIncome)
+          : undefined;
+
+      console.log('Creating application with data:', {
+        applicationDate: applicationDate
+          ? new Date(applicationDate)
+          : new Date(),
+        status: status || ApplicationStatus.Pending,
+        propertyId: parsedPropertyId,
+        tenantId,
+        annualIncome: parsedAnnualIncome,
+      });
+
       const newApplication = await prisma.application.create({
         data: {
-          applicationDate: new Date(applicationDate),
-          status,
+          applicationDate: applicationDate
+            ? new Date(applicationDate)
+            : new Date(),
+          status: status || ApplicationStatus.Pending,
           name,
           email,
           phoneNumber,
           occupation,
-          annualIncome,
+          annualIncome: parsedAnnualIncome,
           message,
           property: {
-            connect: { id: propertyId },
+            connect: { id: parsedPropertyId },
           },
           tenant: {
             connect: { supabaseId: tenantId },
@@ -151,10 +221,21 @@ export const createApplication = asyncHandler(
         },
       });
 
+      console.log('Application created successfully:', newApplication.id);
       res.status(201).json(newApplication);
     } catch (error: any) {
-      console.error('Application creation error:', error);
-      handlePrismaError(res, error as any, 'Failed to create application');
+      console.error('Application creation error details:', error);
+
+      // Check for specific Prisma errors
+      if (error.code === 'P2003') {
+        return res.status(400).json({
+          message:
+            'Invalid reference: The propertyId or tenantId you provided does not exist',
+          details: error.meta?.field_name || error.message,
+        });
+      }
+
+      handlePrismaError(res, error, 'Failed to create application');
     }
   }
 );
@@ -235,11 +316,7 @@ export const updateApplicationStatus = asyncHandler(
       });
     } catch (error: any) {
       console.error('Application status update error:', error);
-      handlePrismaError(
-        res,
-        error as any,
-        'Failed to update application status'
-      );
+      handlePrismaError(res, error, 'Failed to update application status');
     }
   }
 );
