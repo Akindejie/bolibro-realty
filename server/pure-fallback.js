@@ -12,6 +12,38 @@ try {
   console.error('Failed to load dotenv, proceeding without it:', e.message);
 }
 
+const fs = require('fs');
+const path = require('path');
+
+// Try to load ping-supabase script
+let pingSupabase = null;
+try {
+  // Try multiple possible locations for the ping-supabase script
+  const possiblePaths = [
+    path.join(__dirname, 'scripts', 'ping-supabase.js'),
+    path.join(__dirname, 'src', 'scripts', 'ping-supabase.js'),
+    './scripts/ping-supabase.js',
+    './src/scripts/ping-supabase.js',
+  ];
+
+  for (const scriptPath of possiblePaths) {
+    if (fs.existsSync(scriptPath)) {
+      console.log(`Found ping-supabase script at ${scriptPath}`);
+      pingSupabase = require(scriptPath);
+      break;
+    }
+  }
+
+  if (pingSupabase && typeof pingSupabase.startPingSchedule === 'function') {
+    console.log('Starting ping schedule...');
+    pingSupabase.startPingSchedule(10); // Ping every 10 minutes
+  } else {
+    console.error('startPingSchedule function not found in ping-supabase.js');
+  }
+} catch (e) {
+  console.error('Failed to load ping-supabase script:', e);
+}
+
 // Create Express app if available
 let express;
 try {

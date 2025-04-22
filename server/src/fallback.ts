@@ -18,9 +18,11 @@ let pingSupabase = null;
 try {
   // Try multiple possible locations for the ping-supabase script
   const possiblePaths = [
-    './dist/scripts/ping-supabase.js',
-    './src/scripts/ping-supabase.js',
+    path.join(__dirname, 'scripts', 'ping-supabase.js'),
+    path.join(__dirname, '..', 'scripts', 'ping-supabase.js'),
+    path.join(__dirname, '..', 'src', 'scripts', 'ping-supabase.js'),
     './scripts/ping-supabase.js',
+    '../scripts/ping-supabase.js',
   ];
 
   for (const scriptPath of possiblePaths) {

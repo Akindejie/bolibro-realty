@@ -1,74 +1,75 @@
 /**
- * Simple script to periodically ping Supabase to keep the connection alive
- * This helps prevent database connections from timing out during periods of inactivity
+ * Simple ping-supabase script for the fallback server
+ * This script pings Supabase at regular intervals to keep the connection alive
  */
 
-const https = require('https');
+// Load environment variables
+try {
+  require('dotenv').config();
+} catch (e) {
+  console.log('Error loading dotenv, proceeding without it:', e.message);
+}
 
-/**
- * Ping the Supabase project to keep connections alive
- */
-function pingSupabaseProject() {
-  const supabaseUrl = process.env.SUPABASE_URL;
+// Check for essential environment variables
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY =
+  process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-  if (!supabaseUrl) {
-    console.warn('SUPABASE_URL environment variable not set, skipping ping');
-    return;
+// Log configuration status
+console.log('Ping service configuration:');
+console.log('- SUPABASE_URL defined:', !!SUPABASE_URL);
+console.log('- SUPABASE_KEY defined:', !!SUPABASE_KEY);
+
+// Ping Supabase
+async function pingSupabase() {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.log('Missing Supabase configuration, skipping ping');
+    return false;
   }
 
-  // Extract the host from the URL
-  let host;
   try {
-    const url = new URL(supabaseUrl);
-    host = url.host;
-  } catch (e) {
-    console.error('Invalid SUPABASE_URL:', e.message);
-    return;
+    console.log(`[${new Date().toISOString()}] Pinging Supabase...`);
+
+    // Simple HTTP request to Supabase
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+    });
+
+    console.log(
+      `[${new Date().toISOString()}] Ping response status:`,
+      response.status
+    );
+    return response.status >= 200 && response.status < 500;
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Ping error:`, error.message);
+    return false;
   }
-
-  const options = {
-    hostname: host,
-    port: 443,
-    path: '/rest/v1/',
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: process.env.SUPABASE_ANON_KEY || '',
-    },
-  };
-
-  const req = https.request(options, (res) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Supabase ping: Status Code ${res.statusCode}`);
-
-    // Consume response data to free up memory
-    res.resume();
-  });
-
-  req.on('error', (e) => {
-    console.error(`Supabase ping error: ${e.message}`);
-  });
-
-  req.end();
 }
 
-/**
- * Start a schedule to ping Supabase at regular intervals
- * @param {number} intervalMinutes - Interval in minutes between pings
- */
-function startPingSchedule(intervalMinutes = 5) {
-  // First ping immediately
-  pingSupabaseProject();
+// Start ping schedule
+function startPingSchedule(intervalMinutes = 10, skipDb = false) {
+  console.log(`Starting ping service with ${intervalMinutes} minute interval`);
+  console.log(`Database ping ${skipDb ? 'disabled' : 'enabled'}`);
 
-  // Then set up the interval
+  // Initial ping
+  setTimeout(() => {
+    pingSupabase();
+  }, 5000); // Start after 5 seconds
+
+  // Set up regular interval
   const intervalMs = intervalMinutes * 60 * 1000;
-  setInterval(pingSupabaseProject, intervalMs);
+  setInterval(() => {
+    pingSupabase();
+  }, intervalMs);
 
-  console.log(`Ping schedule started (every ${intervalMinutes} minutes)`);
+  console.log('Ping schedule started');
 }
 
-// Export functions for use in other modules
 module.exports = {
-  pingSupabaseProject,
+  pingSupabase,
   startPingSchedule,
 };
