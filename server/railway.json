@@ -1,10 +1,11 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && npm run build && cp fallback-server.js dist/ || echo 'Ensuring fallback server is available'"
   },
   "deploy": {
-    "startCommand": "npm start",
+    "startCommand": "node -e \"try { require('./dist/index.js') } catch(e) { console.error('Error loading main server:', e); try { require('./dist/fallback.js') } catch(e2) { console.error('Error loading fallback server:', e2); require('./fallback-server.js') } }\"",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/health",

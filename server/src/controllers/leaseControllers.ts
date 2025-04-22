@@ -49,7 +49,7 @@ export const getLeases = asyncHandler(
           },
         });
 
-        const propertyIds = properties.map((p) => p.id);
+        const propertyIds = properties.map((p: { id: number }) => p.id);
 
         // Get leases for these properties
         leases = await prisma.lease.findMany({
@@ -157,11 +157,9 @@ export const getLeasePayments = async (
       (userRole === 'tenant' && lease.tenantId === userId);
 
     if (!hasPermission) {
-      res
-        .status(403)
-        .json({
-          message: 'You do not have permission to access these payments',
-        });
+      res.status(403).json({
+        message: 'You do not have permission to access these payments',
+      });
       return;
     }
 

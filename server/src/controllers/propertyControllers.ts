@@ -316,9 +316,7 @@ export const getProperties = async (
 
     if (favoriteIds) {
       const favoriteIdsArray = (favoriteIds as string).split(',').map(Number);
-      whereConditions.push(
-        Prisma.sql`p.id IN (${Prisma.join(favoriteIdsArray)})`
-      );
+      whereConditions.push(sql`p.id IN (${Prisma.join(favoriteIdsArray)})`);
     }
 
     if (priceMin) {
@@ -424,7 +422,7 @@ export const getProperties = async (
       }
     `;
 
-    const properties = await prisma.$queryRaw<any[]>(completeQuery);
+    const properties = await prisma.$queryRaw(completeQuery);
 
     res.json(properties);
   } catch (error: any) {
@@ -1255,7 +1253,7 @@ export const getPropertyPayments = async (
       },
     });
 
-    const leaseIds = leases.map((lease) => lease.id);
+    const leaseIds = leases.map((lease: { id: number }) => lease.id);
 
     // Now get all payments for these leases
     const payments = await prisma.payment.findMany({

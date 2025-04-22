@@ -2,12 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import prisma, { withRetry } from '../utils/database';
-import {
-  Prisma,
-  ApplicationStatus,
-  PropertyStatus,
-  Lease,
-} from '@prisma/client';
+import { Prisma, ApplicationStatus, PropertyStatus } from '@prisma/client';
+
+// Define Lease interface since we're not importing from @prisma/client
+interface Lease {
+  id: number;
+  propertyId: number;
+  tenantId: string;
+  startDate: Date;
+  endDate: Date;
+  rent: number;
+  deposit: number;
+  property?: any;
+  tenant?: any;
+}
 
 export const getApplications = asyncHandler(
   async (
@@ -15,7 +23,7 @@ export const getApplications = asyncHandler(
     res: Response
   ) => {
     const { userId, userType } = req.query;
-    const whereClause: Prisma.ApplicationWhereInput = {};
+    const whereClause: any = {}; // Change from Prisma.ApplicationWhereInput to any
 
     if (userId && userType) {
       if (userType === 'manager') {
@@ -25,7 +33,7 @@ export const getApplications = asyncHandler(
           },
           select: { id: true },
         });
-        const propertyIds = properties.map((p: Prisma.Property) => p.id);
+        const propertyIds = properties.map((p: any) => p.id); // Change from Prisma.Property to any
         whereClause.propertyId = { in: propertyIds };
       } else if (userType === 'tenant') {
         whereClause.tenantId = userId;
@@ -49,7 +57,8 @@ export const getApplications = asyncHandler(
       },
     });
 
-    const mappedApplications = applications.map((app: Prisma.Application) => ({
+    const mappedApplications = applications.map((app: any) => ({
+      // Change from Prisma.Application to any
       id: app.id,
       applicationDate: app.applicationDate,
       status: app.status,
@@ -152,7 +161,7 @@ export const createApplication = asyncHandler(
 
 export const updateApplicationStatus = asyncHandler(
   async (
-    req: Request<{ id: string }, any, { status: ApplicationStatus }>,
+    req: Request, // Change to a standard Request type instead of a parameterized one
     res: Response,
     next: NextFunction
   ) => {

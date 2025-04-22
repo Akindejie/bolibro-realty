@@ -212,12 +212,51 @@ export const getManagerProperties = async (
 
     // Convert location coordinates to correct format
     const formattedProperties = await Promise.all(
-      properties.map(async (property) => {
-        try {
-          const coordinates: { coordinates: string }[] =
-            await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
+      (properties as any[]).map(
+        async (property: {
+          id: number;
+          location: {
+            id: number;
+            [key: string]: any;
+          };
+          [key: string]: any;
+        }) => {
+          try {
+            const coordinates: { coordinates: string }[] =
+              await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
 
-          if (!coordinates[0]?.coordinates) {
+            if (!coordinates[0]?.coordinates) {
+              return {
+                ...property,
+                location: {
+                  ...property.location,
+                  coordinates: {
+                    longitude: 0,
+                    latitude: 0,
+                  },
+                },
+              };
+            }
+
+            const geoJSON: any = wktToGeoJSON(coordinates[0].coordinates);
+            const longitude = geoJSON.coordinates[0];
+            const latitude = geoJSON.coordinates[1];
+
+            return {
+              ...property,
+              location: {
+                ...property.location,
+                coordinates: {
+                  longitude,
+                  latitude,
+                },
+              },
+            };
+          } catch (err) {
+            console.error(
+              `Error converting coordinates for property ${property.id}:`,
+              err
+            );
             return {
               ...property,
               location: {
@@ -229,38 +268,8 @@ export const getManagerProperties = async (
               },
             };
           }
-
-          const geoJSON: any = wktToGeoJSON(coordinates[0].coordinates);
-          const longitude = geoJSON.coordinates[0];
-          const latitude = geoJSON.coordinates[1];
-
-          return {
-            ...property,
-            location: {
-              ...property.location,
-              coordinates: {
-                longitude,
-                latitude,
-              },
-            },
-          };
-        } catch (err) {
-          console.error(
-            `Error converting coordinates for property ${property.id}:`,
-            err
-          );
-          return {
-            ...property,
-            location: {
-              ...property.location,
-              coordinates: {
-                longitude: 0,
-                latitude: 0,
-              },
-            },
-          };
         }
-      })
+      )
     );
 
     res.status(200).json(formattedProperties);
