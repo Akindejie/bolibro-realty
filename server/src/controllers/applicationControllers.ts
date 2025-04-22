@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
-import { prisma } from '../lib/prisma';
+import prisma, { withRetry } from '../utils/database';
 
 export const getApplications = asyncHandler(
   async (

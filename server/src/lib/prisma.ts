@@ -1,12 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import prisma, { sql, withRetry, disconnectPrisma } from '../utils/database';
 
-// Create a singleton instance of the PrismaClient
-const prisma = new PrismaClient({
-  log: ['error', 'warn'],
-});
-
-// Export SQL tag for use in raw queries
-const { sql, join, empty } = Prisma;
-
-export { prisma, sql, join, empty };
+export { prisma, sql, withRetry, disconnectPrisma };
 export default prisma;

@@ -1,4 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+
+// Add the SQL export
+export const { sql } = Prisma;
 
 // Create a singleton Prisma instance
 let prisma: PrismaClient;

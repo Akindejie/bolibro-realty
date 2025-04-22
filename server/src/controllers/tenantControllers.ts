@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 // @ts-ignore
 const { wktToGeoJSON } = require('@terraformer/wkt');
 import { AuthenticatedRequest } from '../types/authenticatedRequest';
-import { prisma } from '../lib/prisma';
+import prisma, { withRetry } from '../utils/database';
 
 /**
  * This application now uses Supabase for authentication.

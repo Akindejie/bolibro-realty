@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { uploadLeaseDocument as uploadLeaseDocumentToStorage } from '../utils/fileUpload';
-import { prisma } from '../lib/prisma';
+import prisma, { withRetry } from '../utils/database';
 
 // Define AuthenticatedRequest interface inline to avoid import issues
 interface AuthenticatedRequest extends Request {
