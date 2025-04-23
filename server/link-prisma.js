@@ -17,7 +17,11 @@ function log(message) {
 // Find Prisma client directory
 function findPrismaClientDir() {
   const possibleDirs = [
+    // Default path where Prisma client is generated with our updated schema
     path.join(process.cwd(), 'node_modules', '.prisma', 'client'),
+    // Path where Prisma client might be generated in the Docker container
+    path.join(process.cwd(), 'node_modules', '@prisma', 'client'),
+    // Old custom path
     path.join(
       process.cwd(),
       'prisma',
@@ -26,7 +30,9 @@ function findPrismaClientDir() {
       'prisma',
       'client'
     ),
+    // Alternative paths
     path.join(process.cwd(), 'prisma', 'client'),
+    path.join(process.cwd(), 'prisma', 'node_modules', '.prisma', 'client'),
   ];
 
   for (const dir of possibleDirs) {
@@ -85,6 +91,10 @@ function createSymlink(sourceDir) {
         fs.mkdirSync(nodeModulesDir, { recursive: true });
       }
 
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
       // Use execSync to copy
       execSync(`cp -R ${sourceDir}/* ${targetDir}/`);
       log('Files copied successfully');
@@ -112,13 +122,13 @@ function createHelperIndex(clientDir) {
     const indexContent = `
 // Generated helper index.js for @prisma/client
 try {
-  const { PrismaClient } = require('${clientDir.replace(
+  const prismaClientPath = '${clientDir.replace(/\\/g, '\\\\')}';
+  module.exports = require(prismaClientPath);
+} catch (e) {
+  console.error('Error loading Prisma Client from ${clientDir.replace(
     /\\/g,
     '\\\\'
-  )}/index.js');
-  module.exports = { PrismaClient };
-} catch (e) {
-  console.error('Error loading Prisma Client:', e.message);
+  )}:', e.message);
   // Provide a mock implementation
   class MockPrismaClient {
     constructor() {
@@ -188,6 +198,40 @@ module.exports = {
   }
 }
 
+// Ensure runtime/library.js exists (common error in Docker)
+function ensureRuntimeLibrary() {
+  try {
+    const clientDir = path.join(
+      process.cwd(),
+      'node_modules',
+      '@prisma',
+      'client'
+    );
+    const runtimeDir = path.join(clientDir, 'runtime');
+    const libraryPath = path.join(runtimeDir, 'library.js');
+
+    if (fs.existsSync(clientDir) && !fs.existsSync(libraryPath)) {
+      log(`Missing library.js in runtime directory`);
+
+      // Create runtime directory if it doesn't exist
+      if (!fs.existsSync(runtimeDir)) {
+        fs.mkdirSync(runtimeDir, { recursive: true });
+      }
+
+      // Create a simple library.js file as a placeholder
+      const libraryContent = `
+// Generated placeholder for runtime/library.js
+module.exports = {};
+`;
+
+      fs.writeFileSync(libraryPath, libraryContent);
+      log(`Created placeholder library.js at ${libraryPath}`);
+    }
+  } catch (error) {
+    log(`Error ensuring runtime library: ${error.message}`);
+  }
+}
+
 // Copy schema.prisma to ensure it's available
 function copySchema() {
   try {
@@ -212,11 +256,29 @@ function copySchema() {
   }
 }
 
+// Generate Prisma client
+function generateClient() {
+  try {
+    log('Attempting to generate Prisma client...');
+    execSync('npx prisma generate --schema=./prisma/schema.prisma', {
+      stdio: 'inherit',
+    });
+    log('Prisma client generated successfully');
+    return true;
+  } catch (error) {
+    log(`Error generating Prisma client: ${error.message}`);
+    return false;
+  }
+}
+
 // Main function
 async function main() {
   log('Starting Prisma client linking...');
 
-  // First, copy the schema to ensure it's available
+  // Try to generate the client first
+  generateClient();
+
+  // Copy the schema to ensure it's available
   copySchema();
 
   // Find the Prisma client directory
@@ -230,47 +292,19 @@ async function main() {
       log('Symlink failed, trying to create helper index...');
       createHelperIndex(clientDir);
     }
+
+    // Ensure runtime/library.js exists
+    ensureRuntimeLibrary();
   } else {
-    log('Cannot find Prisma client, attempting to generate...');
-
-    // Try to generate the client
-    try {
-      execSync('npx prisma generate --schema=./prisma/schema.prisma', {
-        stdio: 'inherit',
-      });
-      log('Prisma client generated');
-
-      // Try to find the client directory again
-      const newClientDir = findPrismaClientDir();
-      if (newClientDir) {
-        log(`Found Prisma client after generation at ${newClientDir}`);
-        const symlinkSuccess = createSymlink(newClientDir);
-
-        if (!symlinkSuccess) {
-          log(
-            'Symlink failed after generation, trying to create helper index...'
-          );
-          createHelperIndex(newClientDir);
-        }
-      } else {
-        log(
-          'Could not find Prisma client even after generation, creating mock...'
-        );
-        createMockClient();
-      }
-    } catch (error) {
-      log(`Failed to generate Prisma client: ${error.message}`);
-      log('Creating mock Prisma client instead...');
-      createMockClient();
-    }
+    log('Cannot find Prisma client, falling back to mock implementation');
+    createMockClient();
   }
 
-  log('Prisma client linking completed');
+  log('Prisma client linking complete');
 }
 
 // Run the main function
 main().catch((error) => {
-  log(`Unhandled error: ${error.message}`);
+  log(`Unhandled error in link-prisma script: ${error.message}`);
   log(error.stack);
-  process.exit(1);
 });

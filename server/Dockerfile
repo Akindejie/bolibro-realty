@@ -46,8 +46,11 @@ COPY scripts/ping-supabase.js /app/src/scripts/
 # Copy remaining source files
 COPY . .
 
+# Add docker:prepare script for consistent Prisma generation
+RUN npm pkg set scripts.docker:prepare="prisma generate && node -e \"console.log('Prisma client generated successfully at ' + new Date())\""
+
 # Generate Prisma client explicitly with full path
-RUN npx prisma generate --schema=./prisma/schema.prisma || echo "Failed to generate Prisma client, but continuing build"
+RUN npm run docker:prepare || echo "Failed to generate Prisma client on first attempt, will try again later"
 
 # Run the link-prisma script to ensure Prisma client is properly linked
 RUN node link-prisma.js
@@ -60,6 +63,9 @@ RUN npm pkg set scripts.postinstall="node -e \"const fs=require('fs'); if(fs.exi
 
 # Build the application, but continue even if it fails
 RUN npm run build || echo "Main build failed, will use fallback"
+
+# Run Prisma generate one more time to ensure it's in the right place
+RUN npm run docker:prepare
 
 # Make sure latest ping-supabase.js is copied everywhere it might be needed
 RUN cp -f /app/scripts/ping-supabase.js /app/dist/scripts/ \
@@ -77,5 +83,5 @@ ENV NODE_ENV=production
 # Expose the port that the app uses
 EXPOSE $PORT
 
-# Start with bootstrap script
-CMD ["node", "bootstrap.js"]
+# Ensure Prisma is properly generated before starting the application
+CMD npm run docker:prepare && node bootstrap.js

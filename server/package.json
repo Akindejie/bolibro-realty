@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node bootstrap.js",
     "start:debug": "ls -la && ls -la dist || echo 'dist not found' && node bootstrap.js",
+    "docker:prepare": "prisma generate && node -e \"console.log('Prisma client generated successfully at ' + new Date())\"",
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "npm run build:prisma && npm run build:ts",
     "build:ts": "tsc -p tsconfig.json || tsc -p tsconfig.fallback.json",
