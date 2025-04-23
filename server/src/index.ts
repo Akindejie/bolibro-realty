@@ -64,24 +64,33 @@ app.get('/', (req, res) => {
 
 // Add a health check endpoint
 app.get('/health', async (req, res) => {
-  // Check database connectivity
-  const dbConnected = await checkDatabaseConnection();
+  try {
+    // Check database connectivity
+    const dbConnected = await checkDatabaseConnection();
 
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    auth: !!process.env.JWT_SECRET,
-    database: {
-      configured: !!process.env.DATABASE_URL,
-      connected: dbConnected,
-    },
-    storage: !!process.env.SUPABASE_URL,
-    services: {
-      database: dbConnected ? 'online' : 'offline',
-      storage: !!process.env.SUPABASE_URL ? 'configured' : 'not configured',
-    },
-  });
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      auth: !!process.env.JWT_SECRET,
+      database: {
+        configured: !!process.env.DATABASE_URL,
+        connected: dbConnected,
+      },
+      storage: !!process.env.SUPABASE_URL,
+      services: {
+        database: dbConnected ? 'online' : 'offline',
+        storage: !!process.env.SUPABASE_URL ? 'configured' : 'not configured',
+      },
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Health check failed',
+      error: error.message,
+    });
+  }
 });
 
 app.use('/properties', propertyRoutes);

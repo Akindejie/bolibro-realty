@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import prisma, { withRetry } from '../utils/database';
-// @ts-ignore
 const { wktToGeoJSON } = require('@terraformer/wkt');
 import { AuthenticatedRequest } from '../types/authenticatedRequest';
+import prisma, { withRetry } from '../utils/database';
 
 /**
  * This application now uses Supabase for authentication.
@@ -15,6 +14,7 @@ export const getManager = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Using supabaseId to identify the manager
     const { userId } = req.params;
     const authUserId = req.user?.id;
     const userRole = req.user?.role;

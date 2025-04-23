@@ -17,32 +17,51 @@ export function getPrismaInstance(): PrismaClient {
     console.log('Initializing new Prisma client');
     prisma = new PrismaClient({
       log: ['error', 'warn'],
-      // Adding datasources configuration with connection_limit
+      // Adding datasources configuration with connection pooling settings
       datasources: {
         db: {
           url: process.env.DATABASE_URL,
+          // Add connection pool options to URL
+          // This helps manage prepared statements better
         },
       },
     });
 
     // Add middleware to handle connection issues
     prisma.$use(async (params, next) => {
-      try {
-        return await next(params);
-      } catch (error: any) {
-        // If it's a prepared statement error, reconnect and retry
-        if (
-          error.message?.includes('prepared statement') &&
-          (error.code === '42P05' || error.message.includes('already exists'))
-        ) {
-          console.log('Handling prepared statement error, reconnecting...');
-          await prisma.$disconnect();
-          await prisma.$connect();
-          // Retry the operation
+      let retries = 0;
+
+      while (retries < 3) {
+        try {
           return await next(params);
+        } catch (error: any) {
+          // If it's a prepared statement error, reconnect and retry
+          if (
+            error.message?.includes('prepared statement') &&
+            (error.code === '42P05' || error.message.includes('already exists'))
+          ) {
+            console.log(
+              `Handling prepared statement error, reconnecting... (attempt ${
+                retries + 1
+              })`
+            );
+            await prisma.$disconnect();
+            // Add a small delay before reconnecting
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            await prisma.$connect();
+            retries++;
+            // Continue to retry
+          } else {
+            // For other errors, just throw
+            throw error;
+          }
         }
-        throw error;
       }
+
+      // If we've exhausted retries, throw the last error
+      throw new Error(
+        `Failed after ${retries} retries: prepared statement error`
+      );
     });
   }
   return prisma;
@@ -53,7 +72,7 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   try {
     console.log('Testing database connection...');
     // Use a simple query without prepared statements
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$executeRaw`SELECT 1`;
     console.log('Database connection successful');
     return true;
   } catch (error) {

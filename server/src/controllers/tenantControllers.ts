@@ -1,6 +1,4 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-// @ts-ignore
 const { wktToGeoJSON } = require('@terraformer/wkt');
 import { AuthenticatedRequest } from '../types/authenticatedRequest';
 import prisma, { withRetry } from '../utils/database';

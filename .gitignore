@@ -1,24 +1,33 @@
 **/node_modules/
 **/dist/
 
+node_modules/
 .env
+
+
+
+client/.next/
+client/node_modules/
+client/dist/
+client/.env
 client/.env.local
 client/.env.development
 client/.env.production
-server/.env
+client/.env.example
 
-client/.next/
+
 
 .DS_Store
 Thumbs.db
 
 .vscode/
 
-client/node_modules/
-server/node_modules/
-client/dist/
 server/dist/
-client/.env
+server/node_modules/
+server/prisma/node_modules/
 server/.env
-client/.next/
-node_modules
+server/.env.backup
+server/.env.example
+server/prisma/dev.db
+server/prisma/dev.db-journal
+server/prisma/dev.db-trace.json
