@@ -47,7 +47,7 @@ const FeaturesSection = () => {
                   [
                     'Trustworthy and Verified Listings',
                     'Browse Available Listings with Ease',
-                    'Sign up today and get 10% off your booking',
+                    'Sign up to get 10% off your booking',
                   ][index]
                 }
                 description={
@@ -57,8 +57,8 @@ const FeaturesSection = () => {
                     'Find trustworthy and verified listings to ensure a hassle-free experience.',
                   ][index]
                 }
-                linkText={['Explore', 'Search', 'Discover'][index]}
-                linkHref={['/explore', '/search', '/discover'][index]}
+                linkText={['Explore', 'Search', 'Sign Up'][index]}
+                linkHref={['/search', '/search', '/signup'][index]}
               />
             </motion.div>
           ))}

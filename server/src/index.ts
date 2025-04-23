@@ -100,24 +100,10 @@ async function startServer() {
     // Check database connectivity before starting server
     const dbConnected = await checkDatabaseConnection();
 
-    // Even if DB check fails, we'll start the server but skip DB pings
-    // const skipDbPing = !dbConnected;
-
-    // Ensure Supabase buckets exist
-    // try {
-    //   await ensureBucketsExist();
-    //   console.log('Supabase buckets checked/created');
-    // } catch (err) {
-    //   console.error('Error setting up Supabase buckets:', err);
-    // }
-
     // Start the server
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on port ${port}`);
 
-      // Start pinging Supabase to keep the connection alive
-      // Skip database ping if initial connection failed
-      //startPingSchedule(10, skipDbPing);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
