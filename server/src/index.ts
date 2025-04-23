@@ -44,6 +44,8 @@ app.use(
       'http://localhost:3000',
       'https://bolibro-realty.vercel.app',
       /\.vercel\.app$/, // Allow all subdomains of vercel.app
+      'https://www.bolibrorealty.com',
+      'https://bolibrorealty.com',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
