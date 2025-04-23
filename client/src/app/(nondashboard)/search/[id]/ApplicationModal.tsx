@@ -64,6 +64,8 @@ const ApplicationModal = ({
         status: 'Pending',
         propertyId: Number(propertyId),
         tenantId: user.id,
+        occupation: data.occupation,
+        annualIncome: Number(data.annualIncome),
       });
 
       toast.success('Application submitted successfully!');

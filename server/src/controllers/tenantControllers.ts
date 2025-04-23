@@ -31,20 +31,24 @@ export const getTenant = async (
       return;
     }
 
-    // Using supabaseId to identify the tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { supabaseId: userId },
-      include: {
-        leases: {
-          where: {
-            endDate: {
-              gte: new Date(),
+    // Using supabaseId to identify the tenant with withRetry for connection issues
+    const tenant = await withRetry(
+      () =>
+        prisma.tenant.findUnique({
+          where: { supabaseId: userId },
+          include: {
+            leases: {
+              where: {
+                endDate: {
+                  gte: new Date(),
+                },
+              },
             },
+            favorites: true,
           },
-        },
-        favorites: true,
-      },
-    });
+        }),
+      'Get tenant by ID'
+    );
 
     if (tenant) {
       res.json(tenant);
@@ -169,18 +173,26 @@ export const getCurrentResidences = async (
       return;
     }
 
-    // Using supabaseId to identify tenant properties
-    const properties = await prisma.property.findMany({
-      where: { tenants: { some: { supabaseId: userId } } },
-      include: {
-        location: true,
-      },
-    });
+    // Using supabaseId to identify tenant properties with withRetry
+    const properties = await withRetry(
+      () =>
+        prisma.property.findMany({
+          where: { tenants: { some: { supabaseId: userId } } },
+          include: {
+            location: true,
+          },
+        }),
+      'Find tenant properties'
+    );
 
     const residencesWithFormattedLocation = await Promise.all(
       properties.map(async (property: any) => {
-        const coordinates: { coordinates: string }[] =
-          await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
+        // Use withRetry for raw SQL queries
+        const coordinates: { coordinates: string }[] = await withRetry(
+          () =>
+            prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`,
+          `Get coordinates for location ${property.location.id}`
+        );
 
         const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
         const longitude = geoJSON.coordinates[0];
@@ -223,11 +235,15 @@ export const addFavoriteProperty = async (
       return;
     }
 
-    // Using supabaseId to identify the tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { supabaseId: userId },
-      include: { favorites: true },
-    });
+    // Using supabaseId to identify the tenant with withRetry
+    const tenant = await withRetry(
+      () =>
+        prisma.tenant.findUnique({
+          where: { supabaseId: userId },
+          include: { favorites: true },
+        }),
+      'Find tenant for favorites'
+    );
 
     if (!tenant) {
       res.status(404).json({ message: 'Tenant not found' });
@@ -238,16 +254,20 @@ export const addFavoriteProperty = async (
     const existingFavorites = tenant.favorites || [];
 
     if (!existingFavorites.some((fav: any) => fav.id === propertyIdNumber)) {
-      // Using supabaseId to update the tenant
-      const updatedTenant = await prisma.tenant.update({
-        where: { supabaseId: userId },
-        data: {
-          favorites: {
-            connect: { id: propertyIdNumber },
-          },
-        },
-        include: { favorites: true },
-      });
+      // Using supabaseId to update the tenant with withRetry
+      const updatedTenant = await withRetry(
+        () =>
+          prisma.tenant.update({
+            where: { supabaseId: userId },
+            data: {
+              favorites: {
+                connect: { id: propertyIdNumber },
+              },
+            },
+            include: { favorites: true },
+          }),
+        'Update tenant favorites'
+      );
       res.json(updatedTenant);
     } else {
       res.status(409).json({ message: 'Property already added as favorite' });
@@ -277,16 +297,20 @@ export const removeFavoriteProperty = async (
 
     const propertyIdNumber = Number(propertyId);
 
-    // Using supabaseId to update the tenant
-    const updatedTenant = await prisma.tenant.update({
-      where: { supabaseId: userId },
-      data: {
-        favorites: {
-          disconnect: { id: propertyIdNumber },
-        },
-      },
-      include: { favorites: true },
-    });
+    // Using supabaseId to update the tenant with withRetry
+    const updatedTenant = await withRetry(
+      () =>
+        prisma.tenant.update({
+          where: { supabaseId: userId },
+          data: {
+            favorites: {
+              disconnect: { id: propertyIdNumber },
+            },
+          },
+          include: { favorites: true },
+        }),
+      'Remove tenant favorite'
+    );
 
     res.json(updatedTenant);
   } catch (err: any) {
@@ -320,20 +344,24 @@ export const getTenantProfile = async (
       return;
     }
 
-    // Using supabaseId to identify the tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { supabaseId: authUserId },
-      include: {
-        leases: {
-          where: {
-            endDate: {
-              gte: new Date(),
+    // Using supabaseId to identify the tenant with withRetry for connection issues
+    const tenant = await withRetry(
+      () =>
+        prisma.tenant.findUnique({
+          where: { supabaseId: authUserId },
+          include: {
+            leases: {
+              where: {
+                endDate: {
+                  gte: new Date(),
+                },
+              },
             },
+            favorites: true,
           },
-        },
-        favorites: true,
-      },
-    });
+        }),
+      'Get tenant profile'
+    );
 
     if (tenant) {
       res.json(tenant);

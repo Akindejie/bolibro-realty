@@ -438,6 +438,15 @@ export const getProperty = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const propertyId = Number(id);
+
+    // Check if the ID is a valid number
+    if (isNaN(propertyId)) {
+      res
+        .status(400)
+        .json({ message: 'Invalid property ID.  ID must be a number.' });
+      return;
+    }
 
     const property = await prisma.property.findUnique({
       where: { id: Number(id) },
@@ -459,13 +468,15 @@ export const getProperty = async (
         ...property,
         photoUrls: Array.isArray(property.photoUrls) ? property.photoUrls : [],
         images: Array.isArray(property.images) ? property.images : [],
-        location: {
-          ...property.location,
-          coordinates: {
-            longitude,
-            latitude,
-          },
-        },
+        location: property.location
+          ? {
+              ...property.location,
+              coordinates: {
+                longitude: longitude ?? null, // Handle undefined case
+                latitude: latitude ?? null, // Handle undefined case
+              },
+            }
+          : null, // Handle the case where location might be null
       };
 
       res.json(propertyWithCoordinates);

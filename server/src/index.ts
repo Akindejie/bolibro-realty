@@ -9,7 +9,10 @@ import morgan from 'morgan';
 import applicationRoutes from './routes/applicationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 // import { ensureBucketsExist } from './config/supabase';
-import prisma, { checkDatabaseConnection } from './utils/database';
+import prisma, {
+  checkDatabaseConnection,
+  disconnectPrisma,
+} from './utils/database';
 import path from 'path';
 
 /* ROUTE IMPORT */
@@ -97,21 +100,48 @@ const port = Number(process.env.PORT) || 3002;
 // Startup sequence
 async function startServer() {
   try {
+    // Log Supabase configuration status (without exposing secrets)
+    console.log('Supabase configuration:');
+    console.log('- URL defined:', !!process.env.SUPABASE_URL);
+    console.log(
+      '- URL value:',
+      process.env.SUPABASE_URL
+        ? `${process.env.SUPABASE_URL.slice(0, 5)}...`
+        : 'undefined'
+    );
+    console.log('- Service key defined:', !!process.env.SUPABASE_SERVICE_KEY);
+    console.log(
+      '- Service key length:',
+      process.env.SUPABASE_SERVICE_KEY?.length || 0
+    );
+
     // Check database connectivity before starting server
     const dbConnected = await checkDatabaseConnection();
+
+    if (!dbConnected) {
+      console.warn('Database connection failed, but starting server anyway');
+    }
 
     // Start the server
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on port ${port}`);
+    });
 
+    // Handle graceful shutdown
+    process.on('SIGTERM', async () => {
+      console.log('SIGTERM signal received: closing HTTP server');
+      await disconnectPrisma();
+      process.exit(0);
+    });
+
+    process.on('SIGINT', async () => {
+      console.log('SIGINT signal received: closing HTTP server');
+      await disconnectPrisma();
+      process.exit(0);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
-  } finally {
-    if (prisma) {
-      await prisma.$disconnect(); // Ensure disconnection
-    }
   }
 }
 

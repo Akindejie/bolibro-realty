@@ -65,7 +65,7 @@ export const applicationSchema = z.object({
   annualIncome: z.coerce
     .number()
     .positive('Annual income must be positive')
-    .min(0, 'Annual income cannot be negative')
+    .min(1, 'Annual income is required')
     .default(0),
   message: z.string().optional(),
 });

@@ -141,6 +141,9 @@ export const createApplication = asyncHandler(
     if (!name) missingFields.push('name');
     if (!email) missingFields.push('email');
     if (!phoneNumber) missingFields.push('phoneNumber');
+    if (!occupation) missingFields.push('occupation');
+    if (annualIncome === undefined || annualIncome === null)
+      missingFields.push('annualIncome');
 
     if (missingFields.length > 0) {
       const errorMessage = `Missing required fields: ${missingFields.join(
@@ -162,6 +165,24 @@ export const createApplication = asyncHandler(
     }
 
     console.log('Valid propertyId parsed:', parsedPropertyId);
+
+    // Validate annualIncome is a valid number if provided
+    const parsedAnnualIncome =
+      annualIncome !== undefined && annualIncome !== null
+        ? typeof annualIncome === 'number'
+          ? annualIncome
+          : parseFloat(annualIncome)
+        : undefined;
+
+    if (
+      annualIncome !== undefined &&
+      annualIncome !== null &&
+      isNaN(parsedAnnualIncome)
+    ) {
+      const errorMessage = `Invalid annualIncome format: ${annualIncome} (type: ${typeof annualIncome})`;
+      console.error(errorMessage);
+      return res.status(400).json({ message: errorMessage });
+    }
 
     try {
       // Check if property exists
@@ -189,13 +210,6 @@ export const createApplication = asyncHandler(
       }
 
       console.log('Tenant found:', tenant.id, tenant.name);
-
-      const parsedAnnualIncome =
-        annualIncome !== undefined
-          ? typeof annualIncome === 'number'
-            ? annualIncome
-            : parseFloat(annualIncome)
-          : undefined;
 
       console.log('Creating application with data:', {
         applicationDate: applicationDate
