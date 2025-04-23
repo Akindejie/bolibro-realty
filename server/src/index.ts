@@ -8,7 +8,6 @@ import cors from 'cors';
 import morgan from 'morgan';
 import applicationRoutes from './routes/applicationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
-// import { ensureBucketsExist } from './config/supabase';
 import prisma, {
   checkDatabaseConnection,
   disconnectPrisma,
