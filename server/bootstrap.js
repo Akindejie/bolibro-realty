@@ -99,6 +99,14 @@ async function bootstrap() {
   } catch (error) {
     log(`Failed to start main server: ${error.message}`);
 
+    // Run troubleshooting script
+    try {
+      log('Running troubleshooting script...');
+      require('./troubleshoot.js');
+    } catch (troubleshootError) {
+      log(`Error running troubleshooting: ${troubleshootError.message}`);
+    }
+
     // Try to fix Prisma if it seems to be a Prisma issue
     if (error.message.includes('Prisma') || error.message.includes('prisma')) {
       const fixed = tryFixPrisma();
@@ -141,6 +149,22 @@ async function bootstrap() {
   } catch (pureFallbackError) {
     log(
       `Failed to start pure JavaScript fallback server: ${pureFallbackError.message}`
+    );
+  }
+
+  // Last resort: minimal health check server
+  try {
+    log('Attempting to start minimal health check server...');
+    if (fs.existsSync('./minimal-health.js')) {
+      log('Loading minimal-health.js...');
+      require('./minimal-health.js');
+      return; // Successfully started minimal health server
+    } else {
+      log('minimal-health.js not found');
+    }
+  } catch (minimalHealthError) {
+    log(
+      `Failed to start minimal health check server: ${minimalHealthError.message}`
     );
   }
 

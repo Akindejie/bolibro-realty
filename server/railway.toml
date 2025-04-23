@@ -3,7 +3,10 @@ builder = "nixpacks"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "npm run docker:prepare && npm start"
+startCommand = "node bootstrap.js || node minimal-health.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
-restartPolicyType = "on_failure" 
+restartPolicyType = "on_failure"
+
+[deploy.envs]
+NODE_OPTIONS = "--max-old-space-size=512" 

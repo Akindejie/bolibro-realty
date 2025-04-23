@@ -71,7 +71,9 @@ RUN npm run docker:prepare
 RUN cp -f /app/scripts/ping-supabase.js /app/dist/scripts/ \
     && cp -f /app/scripts/ping-supabase.js /app/src/scripts/ \
     && cp -f /app/fallback-server.js /app/dist/ \
-    && cp -f /app/pure-fallback.js /app/dist/
+    && cp -f /app/pure-fallback.js /app/dist/ \
+    && cp -f /app/minimal-health.js /app/dist/ \
+    && cp -f /app/troubleshoot.js /app/dist/
 
 # Create a healthcheck to see if we're still running
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

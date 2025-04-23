@@ -21,6 +21,19 @@ console.log('Ping service configuration:');
 console.log('- SUPABASE_URL defined:', !!SUPABASE_URL);
 console.log('- SUPABASE_KEY defined:', !!SUPABASE_KEY);
 
+// Additional environment diagnostics
+console.log('\nEnvironment diagnostics:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- PORT:', process.env.PORT);
+console.log('- DATABASE_URL defined:', !!process.env.DATABASE_URL);
+console.log(
+  '- DATABASE_DIRECT_URL defined:',
+  !!process.env.DATABASE_DIRECT_URL
+);
+console.log('- Platform:', process.platform);
+console.log('- Node version:', process.version);
+console.log('- Working directory:', process.cwd());
+
 // Ping Supabase
 async function pingSupabase() {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -44,6 +57,21 @@ async function pingSupabase() {
       `[${new Date().toISOString()}] Ping response status:`,
       response.status
     );
+
+    // Check for detailed response info
+    try {
+      const data = await response.text();
+      console.log(
+        `[${new Date().toISOString()}] Ping response body:`,
+        data.length > 500 ? data.substring(0, 500) + '...' : data
+      );
+    } catch (bodyError) {
+      console.log(
+        `[${new Date().toISOString()}] Could not read response body:`,
+        bodyError.message
+      );
+    }
+
     return response.status >= 200 && response.status < 500;
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Ping error:`, error.message);
