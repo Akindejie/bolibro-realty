@@ -10,10 +10,12 @@ client/.next/
 client/node_modules/
 client/dist/
 client/.env
+client/.env.example
+client/.env.production
 client/.env.local
 client/.env.development
-client/.env.production
-client/.env.example
+
+
 
 
 
@@ -28,6 +30,4 @@ server/prisma/node_modules/
 server/.env
 server/.env.backup
 server/.env.example
-server/prisma/dev.db
-server/prisma/dev.db-journal
-server/prisma/dev.db-trace.json
+
