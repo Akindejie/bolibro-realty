@@ -49,16 +49,8 @@ const ApplicationModal = ({
     setError(null);
 
     try {
-      // Log the data being sent
-      console.log('Submitting application data:', {
-        ...data,
-        propertyId: Number(propertyId),
-        tenantId: user.id,
-        applicationDate: new Date().toISOString(),
-        status: 'Pending',
-      });
-
-      await createApplication({
+      // Ensure numeric values are correctly formatted
+      const formattedData = {
         ...data,
         applicationDate: new Date().toISOString(),
         status: 'Pending',
@@ -66,7 +58,12 @@ const ApplicationModal = ({
         tenantId: user.id,
         occupation: data.occupation,
         annualIncome: Number(data.annualIncome),
-      });
+      };
+
+      // Log the data being sent
+      console.log('Submitting application data:', formattedData);
+
+      await createApplication(formattedData);
 
       toast.success('Application submitted successfully!');
       onClose();

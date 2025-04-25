@@ -123,27 +123,41 @@ async function startServer() {
       process.env.SUPABASE_SERVICE_KEY?.length || 0
     );
 
-    // Check database connectivity before starting server
+    // Add a delay before database operations to give more time between nodemon restarts
+    const delayTime = 2000;
+    console.log(`Delaying database initialization for ${delayTime}ms...`);
+    await new Promise((resolve) => setTimeout(resolve, delayTime));
+
+    // Initialize the server first, then check database after
+    const server = app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
+    });
+
+    // Now check database connectivity (after server is already running)
+    console.log('Now checking database connectivity...');
     const dbConnected = await checkDatabaseConnection();
 
     if (!dbConnected) {
-      console.warn('Database connection failed, but starting server anyway');
+      console.warn('Database connection failed, but server is already running');
+    } else {
+      console.log('Database connection confirmed after server startup');
     }
-
-    // Start the server
-    app.listen(port, '0.0.0.0', () => {
-      console.log(`Server running on port ${port}`);
-    });
 
     // Handle graceful shutdown
     process.on('SIGTERM', async () => {
       console.log('SIGTERM signal received: closing HTTP server');
+      server.close(() => {
+        console.log('HTTP server closed');
+      });
       await disconnectPrisma();
       process.exit(0);
     });
 
     process.on('SIGINT', async () => {
       console.log('SIGINT signal received: closing HTTP server');
+      server.close(() => {
+        console.log('HTTP server closed');
+      });
       await disconnectPrisma();
       process.exit(0);
     });

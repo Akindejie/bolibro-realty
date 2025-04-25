@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { handlePrismaError } from '../utils/prismaErrorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import prisma, { withRetry } from '../utils/database';
-import { PrismaClient } from '@prisma/client';
 
 // Define enums locally if they're not available from Prisma
 enum ApplicationStatus {
@@ -132,6 +131,8 @@ export const createApplication = asyncHandler(
       name,
       email,
       phoneNumber,
+      occupation,
+      annualIncome,
     });
 
     // Validate required fields
@@ -141,9 +142,10 @@ export const createApplication = asyncHandler(
     if (!name) missingFields.push('name');
     if (!email) missingFields.push('email');
     if (!phoneNumber) missingFields.push('phoneNumber');
-    if (!occupation) missingFields.push('occupation');
-    if (annualIncome === undefined || annualIncome === null)
-      missingFields.push('annualIncome');
+    // Do not require occupation and annualIncome as they're optional in the schema
+    // if (!occupation) missingFields.push('occupation');
+    // if (annualIncome === undefined || annualIncome === null)
+    //   missingFields.push('annualIncome');
 
     if (missingFields.length > 0) {
       const errorMessage = `Missing required fields: ${missingFields.join(
@@ -167,21 +169,18 @@ export const createApplication = asyncHandler(
     console.log('Valid propertyId parsed:', parsedPropertyId);
 
     // Validate annualIncome is a valid number if provided
-    const parsedAnnualIncome =
-      annualIncome !== undefined && annualIncome !== null
-        ? typeof annualIncome === 'number'
+    let parsedAnnualIncome = undefined;
+    if (annualIncome !== undefined && annualIncome !== null) {
+      parsedAnnualIncome =
+        typeof annualIncome === 'number'
           ? annualIncome
-          : parseFloat(annualIncome)
-        : undefined;
+          : parseFloat(annualIncome);
 
-    if (
-      annualIncome !== undefined &&
-      annualIncome !== null &&
-      isNaN(parsedAnnualIncome)
-    ) {
-      const errorMessage = `Invalid annualIncome format: ${annualIncome} (type: ${typeof annualIncome})`;
-      console.error(errorMessage);
-      return res.status(400).json({ message: errorMessage });
+      if (isNaN(parsedAnnualIncome)) {
+        const errorMessage = `Invalid annualIncome format: ${annualIncome} (type: ${typeof annualIncome})`;
+        console.error(errorMessage);
+        return res.status(400).json({ message: errorMessage });
+      }
     }
 
     try {
@@ -218,6 +217,7 @@ export const createApplication = asyncHandler(
         status: status || ApplicationStatus.Pending,
         propertyId: parsedPropertyId,
         tenantId,
+        occupation,
         annualIncome: parsedAnnualIncome,
       });
 
