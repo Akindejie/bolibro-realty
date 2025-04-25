@@ -14,8 +14,7 @@ import { toast } from 'react-hot-toast';
 import { setUser } from '@/state/userSlice';
 
 // Define API URL from environment variable
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const api = createApi({
   baseQuery: fetchBaseQuery({

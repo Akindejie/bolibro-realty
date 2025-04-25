@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 export default function SignIn() {
@@ -17,6 +17,7 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     // Check URL parameters
@@ -41,7 +42,14 @@ export default function SignIn() {
 
     try {
       await signIn(email, password);
-      // Redirect will be handled by the auth provider
+      
+      // Check if there's a redirect path stored in localStorage
+      const redirectPath = localStorage.getItem('redirectAfterSignIn');
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterSignIn');
+        router.push(redirectPath);
+      }
+      // If no redirect path, the default redirect will be handled by the auth provider
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {

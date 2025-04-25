@@ -48,9 +48,10 @@ export function getPrismaInstance(): PrismaClient {
     // Parse the DATABASE_URL to add connection pool params if not present
     let dbUrl = process.env.DATABASE_URL || '';
     if (dbUrl && !dbUrl.includes('connection_limit')) {
-      // Add connection pooling parameters with conservative settings
+      // Increase connection limits to avoid timeout issues
       const separator = dbUrl.includes('?') ? '&' : '?';
-      dbUrl = `${dbUrl}${separator}connection_limit=3&statement_cache_size=0&pool_timeout=20`;
+      // Increase connection limits and disable statement cache entirely
+      dbUrl = `${dbUrl}${separator}connection_limit=30&pool_timeout=120&statement_cache_size=0&pgbouncer=true`;
     }
 
     // Create the client with statement_cache_size=0 to prevent prepared statement issues
@@ -166,10 +167,21 @@ export async function withRetry<T>(
         console.log('Handling prepared statement error in retry logic');
 
         try {
-          await client.$disconnect();
+          // More aggressive approach - disconnect, delay, reconnect with new client
+          await disconnectPrisma();
+
           // Add a longer delay
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          await client.$connect();
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // Force a new client creation
+          global._prismaClientSingleton.client = undefined;
+
+          // Get a fresh instance
+          const freshClient = getPrismaInstance();
+          client.$disconnect();
+
+          // Replace the global client
+          global._prismaClientSingleton.client = freshClient;
         } catch (reconnectError) {
           console.error('Error reconnecting:', reconnectError);
         }
@@ -215,6 +227,21 @@ export async function disconnectPrisma(): Promise<void> {
       console.error('Error disconnecting Prisma client:', error);
     }
   }
+}
+
+// Alternative function to get property by ID using raw queries to avoid prepared statement issues
+export async function getPropertyByIdRaw(id: number) {
+  const client = getPrismaInstance();
+  const result = await client.$queryRawUnsafe(
+    `SELECT p.*, 
+     l.id as location_id, l.address, l.city, l.state, l.country, l."postalCode",
+     ST_AsText(l.coordinates) as coordinates_wkt
+     FROM "Property" p
+     JOIN "Location" l ON p."locationId" = l.id
+     WHERE p.id = ${id}`
+  );
+
+  return result[0] || null;
 }
 
 // Export the Prisma instance

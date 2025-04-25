@@ -13,9 +13,12 @@ const PropertyLocation = ({ propertyId }: PropertyLocationProps) => {
     data: property,
     isError,
     isLoading,
+    refetch,
   } = useGetPropertyQuery(propertyId);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     // For debugging
@@ -26,9 +29,31 @@ const PropertyLocation = ({ propertyId }: PropertyLocationProps) => {
     console.log('Property Data:', property);
     console.log('Map Container:', mapContainerRef.current);
 
-    if (isLoading || isError || !property) {
-      console.log('Loading or error state, skipping map initialization');
+    if (isLoading) {
+      console.log('Loading state, waiting for property data...');
       return;
+    }
+
+    if (isError || !property) {
+      console.log('Error or missing property data, may retry fetching...');
+      
+      // If we have retries left and there's no data, try again
+      if (retryCount < maxRetries && !property) {
+        const timer = setTimeout(() => {
+          console.log(`Retrying property fetch (${retryCount + 1}/${maxRetries})...`);
+          setRetryCount(prev => prev + 1);
+          refetch();
+        }, 2000); // Wait 2 seconds before retrying
+        
+        return () => clearTimeout(timer);
+      }
+      
+      return;
+    }
+
+    // Reset retry count on successful data load
+    if (retryCount > 0) {
+      setRetryCount(0);
     }
 
     if (!property.location || !property.location.coordinates) {
@@ -104,12 +129,27 @@ const PropertyLocation = ({ propertyId }: PropertyLocationProps) => {
         map.remove();
       }
     };
-  }, [property, isError, isLoading]);
+  }, [property, isError, isLoading, retryCount, refetch, propertyId]);
 
   if (isLoading) return <Loading />;
-  if (isError) {
-    console.error('Error fetching property:', isError);
-    return <>Property not Found</>;
+  
+  if (isError || (!property && retryCount >= maxRetries)) {
+    console.error('Error fetching property data after retries');
+    return (
+      <div className="py-16">
+        <h3 className="text-xl font-semibold text-primary-800 dark:text-primary-100">
+          Map and Location
+        </h3>
+        <div className="p-8 bg-red-50 text-red-700 rounded-lg mt-4 text-center">
+          Unable to load property location information. Please try refreshing the page.
+        </div>
+      </div>
+    );
+  }
+  
+  // When still retrying
+  if (!property && retryCount < maxRetries) {
+    return <Loading />;
   }
 
   return (
@@ -122,20 +162,22 @@ const PropertyLocation = ({ propertyId }: PropertyLocationProps) => {
           <MapPin className="w-4 h-4 mr-1 text-gray-700" />
           Property Address:
           <span className="ml-2 font-semibold text-gray-700">
-            {property.location?.address || 'Address not available'}
+            {property?.location?.address || 'Address not available'}
           </span>
         </div>
-        <a
-          href={`https://maps.google.com/?q=${encodeURIComponent(
-            property.location?.address || ''
-          )}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex justify-between items-center hover:underline gap-2 text-primary-600"
-        >
-          <Compass className="w-5 h-5" />
-          Get Directions
-        </a>
+        {property?.location?.address && (
+          <a
+            href={`https://maps.google.com/?q=${encodeURIComponent(
+              property.location.address
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex justify-between items-center hover:underline gap-2 text-primary-600"
+          >
+            <Compass className="w-5 h-5" />
+            Get Directions
+          </a>
+        )}
       </div>
       <div
         className="w-full sm:basis-5/12 grow relative rounded-xl mt-4"

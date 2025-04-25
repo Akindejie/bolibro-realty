@@ -448,40 +448,107 @@ export const getProperty = async (
       return;
     }
 
-    const property = await prisma.property.findUnique({
-      where: { id: Number(id) },
-      include: {
-        location: true,
-      },
-    });
+    // Try using the raw query approach to avoid prepared statement issues
+    try {
+      const rawProperty = await prisma.$queryRawUnsafe(`
+        SELECT p.*, 
+        l.id as "locationId", l.address, l.city, l.state, l.country, l."postalCode",
+        ST_AsText(l.coordinates) as coordinates_wkt
+        FROM "Property" p
+        JOIN "Location" l ON p."locationId" = l.id
+        WHERE p.id = ${propertyId}
+      `);
 
-    if (property) {
-      const coordinates: { coordinates: string }[] =
-        await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
+      if (!rawProperty || !rawProperty[0]) {
+        res.status(404).json({ message: 'Property not found' });
+        return;
+      }
 
-      const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
-      const longitude = geoJSON.coordinates[0];
-      const latitude = geoJSON.coordinates[1];
+      const property = rawProperty[0];
+
+      // Parse coordinates from WKT format
+      let latitude = null;
+      let longitude = null;
+
+      if (property.coordinates_wkt) {
+        const wktMatch = property.coordinates_wkt.match(
+          /POINT\(([-\d.]+) ([-\d.]+)\)/i
+        );
+        if (wktMatch && wktMatch.length === 3) {
+          longitude = parseFloat(wktMatch[1]);
+          latitude = parseFloat(wktMatch[2]);
+        }
+      }
 
       // Ensure images and photoUrls are always arrays
       const propertyWithCoordinates = {
         ...property,
         photoUrls: Array.isArray(property.photoUrls) ? property.photoUrls : [],
         images: Array.isArray(property.images) ? property.images : [],
-        location: property.location
-          ? {
-              ...property.location,
-              coordinates: {
-                longitude: longitude ?? null, // Handle undefined case
-                latitude: latitude ?? null, // Handle undefined case
-              },
-            }
-          : null, // Handle the case where location might be null
+        location: {
+          id: property.locationId,
+          address: property.address,
+          city: property.city,
+          state: property.state,
+          country: property.country,
+          postalCode: property.postalCode,
+          coordinates: {
+            longitude: longitude,
+            latitude: latitude,
+          },
+        },
       };
 
+      // Remove redundant fields
+      delete propertyWithCoordinates.address;
+      delete propertyWithCoordinates.city;
+      delete propertyWithCoordinates.state;
+      delete propertyWithCoordinates.country;
+      delete propertyWithCoordinates.postalCode;
+      delete propertyWithCoordinates.coordinates_wkt;
+
       res.json(propertyWithCoordinates);
-    } else {
-      res.status(404).json({ message: 'Property not found' });
+    } catch (rawQueryError) {
+      console.error('Raw query error:', rawQueryError);
+
+      // Fallback to the original approach
+      const property = await prisma.property.findUnique({
+        where: { id: Number(id) },
+        include: {
+          location: true,
+        },
+      });
+
+      if (property) {
+        const coordinates: { coordinates: string }[] =
+          await prisma.$queryRaw`SELECT ST_asText(coordinates) as coordinates from "Location" where id = ${property.location.id}`;
+
+        const geoJSON: any = wktToGeoJSON(coordinates[0]?.coordinates || '');
+        const longitude = geoJSON.coordinates[0];
+        const latitude = geoJSON.coordinates[1];
+
+        // Ensure images and photoUrls are always arrays
+        const propertyWithCoordinates = {
+          ...property,
+          photoUrls: Array.isArray(property.photoUrls)
+            ? property.photoUrls
+            : [],
+          images: Array.isArray(property.images) ? property.images : [],
+          location: property.location
+            ? {
+                ...property.location,
+                coordinates: {
+                  longitude: longitude ?? null, // Handle undefined case
+                  latitude: latitude ?? null, // Handle undefined case
+                },
+              }
+            : null, // Handle the case where location might be null
+        };
+
+        res.json(propertyWithCoordinates);
+      } else {
+        res.status(404).json({ message: 'Property not found' });
+      }
     }
   } catch (err: any) {
     console.error('Error retrieving property:', err);

@@ -49,13 +49,20 @@ const ApplicationModal = ({
     setError(null);
 
     try {
+      // Get the Supabase ID from the user's ID
+      const tenantId = user.supabaseId;
+
+      if (!tenantId) {
+        throw new Error('Missing tenant ID information');
+      }
+
       // Ensure numeric values are correctly formatted
       const formattedData = {
         ...data,
         applicationDate: new Date().toISOString(),
         status: 'Pending',
         propertyId: Number(propertyId),
-        tenantId: user.id,
+        tenantId, // This should be a string value
         occupation: data.occupation,
         annualIncome: Number(data.annualIncome),
       };

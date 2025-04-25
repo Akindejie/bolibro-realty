@@ -103,12 +103,17 @@ const Auth = ({ children }: { children: React.ReactNode }) => {
     }
 
     // If authenticated and on auth pages, redirect to dashboard
+    // But only if there's no custom redirect in localStorage
     if (isAuthenticated && isAuthPage) {
-      if (user?.role === 'manager') {
-        router.push('/managers/properties');
-      } else {
-        router.push('/');
+      const customRedirect = localStorage.getItem('redirectAfterSignIn');
+      if (!customRedirect) {
+        if (user?.role === 'manager') {
+          router.push('/managers/properties');
+        } else {
+          router.push('/');
+        }
       }
+      // If there is a custom redirect, the signin page will handle it
     }
   }, [
     isAuthenticated,

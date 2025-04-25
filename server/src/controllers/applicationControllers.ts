@@ -83,6 +83,15 @@ export const getApplications = asyncHandler(
         beds: app.property.beds,
         baths: app.property.baths,
         photoUrls: app.property.photoUrls,
+        manager: app.property.manager
+          ? {
+              id: app.property.manager.id,
+              name: app.property.manager.name,
+              email: app.property.manager.email,
+              phoneNumber: app.property.manager.phoneNumber,
+              supabaseId: app.property.manager.supabaseId,
+            }
+          : null,
       },
       tenant: {
         id: app.tenant.id,
@@ -199,7 +208,7 @@ export const createApplication = asyncHandler(
 
       // Check if tenant exists
       const tenant = await prisma.tenant.findUnique({
-        where: { supabaseId: tenantId },
+        where: { supabaseId: String(tenantId) },
       });
 
       if (!tenant) {
@@ -237,7 +246,7 @@ export const createApplication = asyncHandler(
             connect: { id: parsedPropertyId },
           },
           tenant: {
-            connect: { supabaseId: tenantId },
+            connect: { supabaseId: String(tenantId) },
           },
         },
         include: {

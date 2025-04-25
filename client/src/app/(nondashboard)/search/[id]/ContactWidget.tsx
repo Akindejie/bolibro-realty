@@ -1,17 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { useGetAuthUserQuery } from "@/state/api";
 import { Phone } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import React from "react";
 
 const ContactWidget = ({ onOpenModal }: ContactWidgetProps) => {
   const { data: authUser } = useGetAuthUserQuery();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleButtonClick = () => {
     if (authUser) {
       onOpenModal();
     } else {
+      // Store the current path before redirecting to sign in
+      localStorage.setItem('redirectAfterSignIn', pathname);
       router.push("/signin");
     }
   };

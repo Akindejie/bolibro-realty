@@ -55,10 +55,10 @@ async function updateEnvFile() {
       let newUrl = value;
       if (value.includes('?')) {
         // Already has parameters, add to them
-        newUrl = `${value}&pool_timeout=20&connection_limit=5&statement_cache_size=0`;
+        newUrl = `${value}&pool_timeout=20&connection_limit=10&statement_cache_size=0`;
       } else {
         // No parameters yet, add them fresh
-        newUrl = `${value}?pool_timeout=20&connection_limit=5&statement_cache_size=0`;
+        newUrl = `${value}?pool_timeout=20&connection_limit=10&statement_cache_size=0`;
       }
 
       modified = true;

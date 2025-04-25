@@ -17,11 +17,11 @@ const Applications = () => {
     isError,
   } = useGetApplicationsQuery(
     {
-      userId: user?.id,
+      userId: user?.supabaseId,
       userType: 'tenant',
     },
     {
-      skip: !isAuthenticated || !user?.id,
+      skip: !isAuthenticated || !user?.supabaseId,
     }
   );
 
